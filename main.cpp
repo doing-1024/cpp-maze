@@ -164,8 +164,8 @@ void makemap(int x, int y) {
     map[x][y] = 1;
     for (i = 0; i < 4; i++)
         if (!ok(map[x + 2 * c[i][0]][y + 2 * c[i][1]])) {
-            map[x + c[i][0]][y + c[i][1]] = 1;
-            makemap(x + 2 * c[i][0], y + 2 * c[i][1]);
+          map[x + c[i][0]][y + c[i][1]] = 1;
+          makemap(x + 2 * c[i][0], y + 2 * c[i][1]);
         }
 }
 
@@ -263,52 +263,52 @@ void stratgame() {
         lasthurt[i] = chrono::system_clock::now();
     }
     
-    while (1) {
-        for (auto& i : mons) i->useSkill();
+    while (1) { 
+      for (auto& i : mons) i->useSkill();
         
-        if (GetAsyncKeyState(0x57) & 0x0001) goit(-1, 0, player);
-        if (GetAsyncKeyState(0x53) & 0x0001) goit(1, 0, player);
-        if (GetAsyncKeyState(0x41) & 0x0001) goit(0, -1, player);
-        if (GetAsyncKeyState(0x44) & 0x0001) goit(0, 1, player);
-        if (GetAsyncKeyState(0x43) & 0x0001) Q = !Q;
-        if (GetAsyncKeyState(VK_ESCAPE) & 0x0001) {
-            game_ = 1;
-            break;
+      if (GetAsyncKeyState(0x57) & 0x0001) goit(-1, 0, player);
+      if (GetAsyncKeyState(0x53) & 0x0001) goit(1, 0, player);
+      if (GetAsyncKeyState(0x41) & 0x0001) goit(0, -1, player);
+      if (GetAsyncKeyState(0x44) & 0x0001) goit(0, 1, player);
+      if (GetAsyncKeyState(0x43) & 0x0001) Q = !Q;
+      if (GetAsyncKeyState(VK_ESCAPE) & 0x0001) {
+        game_ = 1;
+        break;
+      }
+        
+      if (player.x == mapX + 1 && player.y == mapY + 1) {
+        maxhp += guaiShu * maxType;
+        int footIdx = rand() % 4;
+        if (guaiShu >= 3 && foot[footIdx] == 1) {
+          paint(0, 0, 20);
+          foot[footIdx] = 2;
+        } else
+          paint(0, 0, 6);
+        break;
+      }
+        
+      auto now = chrono::system_clock::now();
+      for (int i = 0; i < mons.size(); i++) {
+        auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - lastTime[i]);
+        if (elapsed.count() >= mons[i]->p && qutop2[i] < qutop[i]) {
+          goit(qu[i][++qutop2[i]].first, qu[i][qutop2[i]].second, *mons[i]);
+          lastTime[i] = now;
         }
-        
-        if (player.x == mapX + 1 && player.y == mapY + 1) {
-            maxhp += guaiShu * maxType;
-            int footIdx = rand() % 4;
-            if (guaiShu >= 3 && foot[footIdx] == 1) {
-                paint(0, 0, 20);
-                foot[footIdx] = 2;
-            } else
-                paint(0, 0, 6);
-            break;
-        }
-        
-        auto now = chrono::system_clock::now();
-        for (int i = 0; i < mons.size(); i++) {
-            auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - lastTime[i]);
-            if (elapsed.count() >= mons[i]->p && qutop2[i] < qutop[i]) {
-                goit(qu[i][++qutop2[i]].first, qu[i][qutop2[i]].second, *mons[i]);
-                lastTime[i] = now;
-            }
             
-            auto Elapsed = chrono::duration_cast<chrono::milliseconds>(now - lasthurt[i]);
-            if (Elapsed.count() >= mons[i]->q && player.x == mons[i]->x && player.y == mons[i]->y) {
-                player.hp -= mons[i]->hurt;
-                lasthurt[i] = now;
-                painthart();
-            }
+        auto Elapsed = chrono::duration_cast<chrono::milliseconds>(now - lasthurt[i]);
+        if (Elapsed.count() >= mons[i]->q && player.x == mons[i]->x && player.y == mons[i]->y) {
+          player.hp -= mons[i]->hurt;
+          lasthurt[i] = now;
+          painthart();
         }
+      }
         
-        if (player.hp <= 0) {
-            paint(0, 0, 13);
-            maxhp--;
-            break;
-        }
-        delay_ms(16);
+      if (player.hp <= 0) {
+        paint(0, 0, 13);
+        maxhp--;
+        break;
+      }
+      delay_ms(16);
     }
 }
 
@@ -336,17 +336,17 @@ int main() {
     initgraph((int)screen_width, (int)screen_height, INIT_NOFORCEEXIT);
     
     string lujing[100] {
-		"背景.jpg", "草方块.jpg",  "泥土.jpg", "传送门方块.jpg",
-		"玩家.jpg", "胜利图片.jpg", "原石.jpg", "钻石矿.jpg",
-		"铁矿.jpg", "僵尸.jpg",    "基岩.jpg", "空白.jpg",
-		"失败.jpg", "心.jpg", "空心.jpg", "弓.jpg", "箭.jpg",
-		"鸡骑士.jpg","溺尸.jpg","雨姐.jpg","主大厅.jpg",
-		"冒险模式.jpg",
+		"beijing.jpg", "caofangkuai.jpg",  "nitu.jpg", "chuansongmenfangkuai.jpg",
+		"wanjia.jpg", "shenglitupian.jpg", "yuanshi.jpg", "zuanshikuang.jpg",
+		"tiekuang.jpg", "jiangshi.jpg",    "jiyan.jpg", "kongbai.jpg",
+		"shibai.jpg", "xin.jpg", "kongxin.jpg", "gong.jpg", "jian.jpg",
+		"jiqishi.jpg","nishi.jpg","yujie.jpg","zhudating.jpg",
+		"maoxianmoshi.jpg",
     };
     
     for (int i = 0; i < 22; i++) {
         img[i + 1] = newimage();
-        string _ = "C:走迷宫\\材质\\原版\\" + lujing[i];
+        string _ = "./caizhibao/" + lujing[i];
         getimage(img[i + 1], _.c_str());
     }
     
@@ -363,15 +363,15 @@ int main() {
         stratgame();
         
         while (1) {
-            int x = getch();
-            if (x == ' ') break;
-            if (x == 27) {
-                game_ = 1;
-                break;
-            }
+          int x = getch();
+          if (x == ' ') break;
+          if (x == 27) {
+            game_ = 1;
+            break;
+          }
         }
         if (game_) break;
-    }
+    } 
     
     mciSendString(TEXT("close s1"), NULL, 0, NULL);
     for (int i = 1; i <= 22; i++) delimage(img[i]);
