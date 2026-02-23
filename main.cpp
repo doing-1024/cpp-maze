@@ -5,11 +5,12 @@
 #include <queue>
 #include <ctime>
 #include <memory>
+#include "Lencode.h"
 #include <chrono>
 #include <windows.h>
 #include <vector>
-#pragma comment(lib, "winmm.lib")
-#define timePoint std::chrono::system_clock::time_point
+//#pragma comment(lib, "winmm.lib")
+typedef std::chrono::system_clock::time_point timePoint;
 
 const int INF = 0x7f7f7f7f;
 using namespace std;
@@ -22,70 +23,96 @@ PIMAGE img[50];
 string p;
 int guaiShu;
 
+class Skill{
+	public:
+	virtual ~Skill()=default;
+	virtual void use(){}
+};//TODO(liuruizhou)你不需要知道它是干什么用的，只需要知道它是一个很高级的接口就行
 class Node {
+protected:
+    vector<unique_ptr<Skill> > skillBar;
 public:
-    int x, y, t, hp, hurt, p, q, id;
-    Node(int x=0, int y=0, int t=0, int hp=0, int hurt=0, int p=0, int q=0)
+    int x,y;
+	Tag t;
+	int hp;
+	int hurt;
+	int p;
+	int q;
+	int id;
+    Node(int x=0, int y=0, Tag t=0, int hp=0, int hurt=0, int p=0, int q=0)
         : x(x), y(y), t(t), hp(hp), hurt(hurt), p(p), q(q), id(0) {}
-    virtual void useSkill() {}
+    virtual void useSkill() {
+    	for(auto&i:skillBar){
+    		i->use();
+		}
+	}
 };
 
 class comzom : public Node {
-public:
-    comzom(int x, int y, int t=10, int hp=10, int hurt=2, int p=300, int q=1000)
-        : Node(x, y, t, hp, hurt, p, q) {}
-    void useSkill() override;
-private:
-    int state = 0;
-    timePoint last = chrono::system_clock::now();
-    timePoint now = chrono::system_clock::now();
-    int v;
+private: 
+	class Skill1 : public ::Skill {
+		private:
+    		int state = 0;
+    		timePoint last = chrono::system_clock::now();
+    		timePoint now = chrono::system_clock::now();
+    		int v;
+    		comzom *thie;//这个东西用来表示修改的是哪个实体的属性 
+		public:
+			Skill1(comzom* thisTmp):thie(thisTmp){}
+    		void use() override;
+	};
+	public:
+    comzom(int x, int y, Tag t=obc::comzom, int hp=10, int hurt=2, int p=300, int q=1000)
+        : Node(x, y, t, hp, hurt, p, q) {
+        	skillBar.push_back(make_unique<Skill1>(this));
+		}
 };
 
 class drown : public Node {
 public:
-    drown(int x, int y, int t=19, int hp=10, int hurt=5, int p=400, int q=3000)
+    drown(int x, int y, Tag t=obc::drown, int hp=10, int hurt=5, int p=400, int q=3000)
         : Node(x, y, t, hp, hurt, p, q) {}
 };
 
 class chickJock : public Node {
 public:
-    chickJock(int x, int y, int t=18, int hp=10, int hurt=2, int p=200, int q=700)
+    chickJock(int x, int y, Tag t=obc::chickJock, int hp=10, int hurt=2, int p=200, int q=700)
         : Node(x, y, t, hp, hurt, p, q) {}
 };
 
-void comzom::useSkill() {
+void comzom::Skill1::use() {
     if (maxhp < 15) return;
     if (state == 0) {
         last = chrono::system_clock::now();
         state = 1;
-        this->p = INF;
+        thie->p = INF;
     }
-    if (state == 1) {
+	if (state == 1) {
         now = chrono::system_clock::now();
         auto tmp = chrono::duration_cast<chrono::milliseconds>(now - last);
         if (tmp.count() >= 3000) {
             state = 2;
             last = chrono::system_clock::now();
-            this->hurt = 4; this->p = 200; this->q = 800;
+            thie->hurt = 4; thie->p = 200; thie->q = 800;
         }
     }
-    if (state == 2) {
+	if (state == 2) {
         now = chrono::system_clock::now();
         auto tmp = chrono::duration_cast<chrono::milliseconds>(now - last);
         if (tmp.count() >= 7000) {
             last = chrono::system_clock::now();
-            this->hurt = 2; this->p = 300; this->q = 1000;
+            thie->hurt = 2; thie->p = 300; thie->q = 1000;
             state = 3;
             v = rand() % 10000;
         }
-    }
-    if (state == 3) {
+    } 
+	if (state == 3) {
         now = chrono::system_clock::now();
         auto tmp = chrono::duration_cast<chrono::milliseconds>(now - last);
         if (tmp.count() >= v) state = 0;
     }
 }
+
 
 vector<unique_ptr<Node>> mons;
 Node player(0, 0, 5, 6, 0, 0, 0);
