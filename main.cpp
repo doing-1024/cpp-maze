@@ -32,14 +32,14 @@ protected:
   vector<unique_ptr<Skill>> skillBar;
 
 public:
-  int x, y;
-  Tag t;
-  int hp;
-  int hurt;
-  int p;
-  int q;
+  int x, y;		// 位置
+  Tag t;		// 实体类对象类型标签（Entity object type label）（用来表示这个对象是什么东西）
+  int hp;		// 生命值
+  int hurt;		// 攻击力
+  int p;		// 攻击间隔
+  int q;		// 移动间隔
   int id;
-  Node(int x = 0, int y = 0, Tag t = 0, int hp = 0, int hurt = 0, int p = 0,
+  Node(int x = 0, int y = 0, Tag t = obc::none, int hp = 0, int hurt = 0, int p = 0,
        int q = 0)
       : x(x), y(y), t(t), hp(hp), hurt(hurt), p(p), q(q), id(0) {}
   virtual void useSkill() {
