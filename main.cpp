@@ -37,7 +37,7 @@ using namespace std;
 */
 
 int map[110][110], mapX = 15, mapY = 23, maxhp; // 地图数组 地图长和宽 玩家最大生命值
-int Not[30] = {2, 3, 7, 8, 9}; //不可穿过方块编号
+int Not[30] = {obc::grass, obc::soil, obc::stone, obc::dia, obc::iron}; //不可穿过方块编号
 bool game_, MAP[110][110]; // 是否esc 是否被访问过 (用于dfs创建路径)
 PIMAGE img[50]; // ege特有图片数组
 int guaiShu; //本局怪物数量
@@ -145,9 +145,8 @@ void comzom::Skill1::use() {
 }
 
 vector<unique_ptr<Node>> mons; //实体队列
-Node player(0, 0, 5, 6, 0, 0, 0); //玩家
-pair<int, int> qu[101][1001]; //怪物路径
-int qutop[101], qutop2[101];  //队列指针
+Node player(0, 0, obc::player, 6, 0, 0, 0); //玩家
+vector<deque<pair<int, int>>> qu; //怪物路径
 const int D[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}; //4个基本方向
 
 bool ok(int x) { //当前方块是否可穿过
@@ -166,17 +165,17 @@ void dfsGetQu(int t, int x1, int y1, int x, int y) {
 		int X = x1 + D[i][0], Y = y1 + D[i][1];
 		if (ok(map[X][Y]) && !MAP[X][Y] && X >= 0 && Y >= 0 && X <= mapX + 1 && Y <= mapY + 1) {
 			MAP[X][Y] = 1;
-			qu[t][++qutop[t]] = make_pair(D[i][0], D[i][1]);
+			qu[t].push_back(make_pair(D[i][0], D[i][1]));
 			dfsGetQu(t, X, Y, x, y);
 			if (quok) break;
-			qutop[t]--;
+			qu[t].pop_back();
 			MAP[X][Y] = 0;
 		}
 	}
 }
 
 void getQu(int t, int x, int y) {
-	qutop[t] = qutop2[t] = quok = 0;
+	quok = 0;
 	memset(MAP, 0, sizeof(MAP));
 	dfsGetQu(t, mons[t]->x, mons[t]->y, x, y);
 }
@@ -249,12 +248,18 @@ void goit(int x, int y, Node& t) {
 		t.y = newy;
 		if (t.t == 5) {
 			for (int i = 0; i < mons.size(); i++) {
-				qu[i][++qutop[i]] = make_pair(x, y);
-				while (qutop[i] - 1 > qutop2[i] && qutop[i] >= 2 && qutop2[i] >= 0)
-					if (qutop[i] >= 2 && getok(qu[i][qutop[i]].first, qu[i][qutop[i]].second,
-					                           qu[i][qutop[i] - 1].first, qu[i][qutop[i] - 1].second))
-						qutop[i] -= 2;
-					else break;
+				qu[i].push_back(make_pair(x, y));
+				pair<int,int> a,b;
+				while (qu[i].size() >= 2){
+					a = qu[i].back();
+					qu[i].pop_back();
+					b = qu[i].back();
+					if (getok(a.first, a.second,b.first, b.second))
+						qu[i].pop_back();
+					else 
+						break;
+				}
+				qu[i].push_back(a);
 			}
 		}
 	}
@@ -284,18 +289,19 @@ pair<int, int> getxy() {
 
 void stratgame() {
 	srand(time(0));
-	mons.clear();
-	player = {0, 0, 5, maxhp, 0, 0, 0};
-
+	
+	mons.clear(); //清空实体队列 
+	qu.clear();   //清空路径队列 
+	
+	player = {0, 0, 5, maxhp, 0, 0, 0}; //初始化玩家 
+	 
 	for (int i = 0; i <= mapX + 1; i++)
 		for (int j = 0; j <= mapY + 1; j++)
-			map[i][j] = Not[Rand({40, 30, 15, 1, 4})];
-	makemap(2 * (rand() % (mapX / 2) + 1), 2 * (rand() % (mapY / 2) + 1));
-
-	for (auto& p : mons) {
-		qutop[p->id] = qutop2[p->id] = 0;
-	}
-
+			map[i][j] = Not[Rand({40, 30, 15, 1, 4})]; //初始化地图 
+	makemap(2 * (rand() % (mapX / 2) + 1), 2 * (rand() % (mapY / 2) + 1)); //生成地图 
+	pinatmap(); //绘制地图 
+	paint(1, 1, obc::player); //绘制玩家
+	
 	int maxType = 0;
 	for (int i = 0; i < guaiShu; i++) {
 		int type = Rand({20, 50, 30});
@@ -307,22 +313,21 @@ void stratgame() {
 		else
 			mons.push_back(make_unique<chickJock>(xy.first, xy.second));
 		mons.back()->id = mons.size() - 1;
+		qu.push_back(deque<pair<int, int>>()); 
 		getQu(mons.size() - 1, 0, 0);
 		maxType = max(maxType, type);
-	}
-	pinatmap();
-	paint(1, 1, 5);
-
+	} //随机生成guaiShu个怪 
+	
 	vector<timePoint> lastTime(guaiShu), lasthurt(guaiShu);
 	for (int i = 0; i < guaiShu; i++) {
 		lastTime[i] = chrono::system_clock::now();
 		lasthurt[i] = chrono::system_clock::now();
-	}
-
+	}	//初始化时间数组 
+	
 	while (1) {
 		for (auto& i : mons) i->useSkill();
 
-		paint(mapX + 2, mapY + 2, 4);
+		paint(mapX + 2, mapY + 2, obc::port);
 
 		if (GetAsyncKeyState(0x57) & 0x0001) goit(-1, 0, player);
 		if (GetAsyncKeyState(0x53) & 0x0001) goit(1, 0, player);
@@ -335,15 +340,17 @@ void stratgame() {
 
 		if (player.x == mapX + 1 && player.y == mapY + 1) {
 			maxhp += guaiShu * maxType;
-			paint(0, 0, 6);
+			paint(0, 0, obc::win);
 			break;
 		}
 
 		auto now = chrono::system_clock::now();
 		for (int i = 0; i < mons.size(); i++) {
 			auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - lastTime[i]);
-			if (elapsed.count() >= mons[i]->p && qutop2[i] < qutop[i]) {
-				goit(qu[i][++qutop2[i]].first, qu[i][qutop2[i]].second, *mons[i]);
+			if (elapsed.count() >= mons[i]->p && !qu[i].empty()) {
+				pair<int,int> a = qu[i].front();
+				qu[i].pop_front();
+				goit(a.first, a.second, *mons[i]);
 				lastTime[i] = now;
 			}
 
@@ -356,7 +363,7 @@ void stratgame() {
 		}
 
 		if (player.hp <= 0) {
-			paint(0, 0, 13);
+			paint(0, 0, obc::loss);
 			maxhp--;
 			break;
 		}
@@ -365,8 +372,8 @@ void stratgame() {
 }
 
 void getStrat() {
-	paint(0, 0, 21);
-	putimage(300, 300, img[22]);
+	paint(0, 0, obc::zhudating);
+	putimage(300, 300, img[obc::start]);
 	mouse_msg msg;
 	while (1) {
 		while (mousemsg()) {
@@ -402,10 +409,10 @@ int main() {
 		getimage(img[i + 1], _.c_str());
 	}
 
-	maxhp = 6;
+	maxhp = 60;
 
 	while (1) {
-		paint(0, 0, 12);
+		paint(0, 0, obc::blank);
 		getStrat();
 		if (maxhp > 54) maxhp = 54;
 		stratgame();

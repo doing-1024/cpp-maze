@@ -22,7 +22,7 @@ namespace obc{//object encode list 对象编码列表
 		dia = 8,         // diamond的别名
 		iron = 9,        // 铁矿
 		zombie = 10,     // 僵尸
-		comzom = 10,
+		comzom = 10,	 // 普通僵尸别名
 		bedrock = 11,    // 基岩
 		none = 12,       // 空白
 		blank = 12,      // 真实的空白 
@@ -33,11 +33,13 @@ namespace obc{//object encode list 对象编码列表
 		arrow = 17,      // 箭 
 		arr = 17,        // arrow的别名
 		chickenJockey=18,// 鸡骑士
-		chickJock=18,    //简称
+		chickJock=18,    // 简称
 		CJ = 18,         // 简称*2
 		drowned = 19,    // 溺尸
-		drown = 19,      //   д 
-		yujie = 20       // 雨姐
+		drown = 19,      // 溺尸别名
+		yujie = 20,      // 雨姐
+		zhudating = 21,  // 主大厅
+		start = 22       // 开始按钮 
 	};
 }
 /*
