@@ -37,9 +37,15 @@ namespace obc{//object encode list 对象编码列表
 		CJ = 18,         // 简称*2
 		drowned = 19,    // 溺尸
 		drown = 19,      // 溺尸别名
-		yujie = 20,      // 雨姐
-		zhudating = 21,  // 主大厅
-		start = 22       // 开始按钮 
+		zhudating = 20,  // 主大厅
+		start = 21,      // 开始按钮 
+		wupinlan = 22,	 // 物品栏
+		mujian = 23,	 // 木剑 
+		mj = 23,	     // 木剑
+		mujianblack = 24,// 木剑灰色背景
+		mjb = 24,		 // 木剑灰色背景
+		wupinlanw = 25,  // 白框物品栏
+		wplat = 25        // 白框物品栏
 	};
 }
 /*
@@ -62,5 +68,4 @@ namespace obc{//object encode list 对象编码列表
 17:箭.jpg
 18:鸡骑士.jpg
 19:溺尸.jpg
-20:雨姐.jpg
 */
