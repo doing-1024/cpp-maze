@@ -7,32 +7,40 @@
 #include <windows.h>
 #include <vector>
 #include "Lencode.h"
+
 #define timePoint std::chrono::system_clock::time_point 
 
 const int INF = 0x7f7f7f7f;
 using namespace std;
 
-int map[110][110], mapX = 15, mapY = 23, maxhp;
+// 基础配置
+int map[110][110], mapX = 13, mapY = 23, maxhp;
 int Not[30] = {obc::grass, obc::soil, obc::stone, obc::dia, obc::iron};
 bool game_, MAP[110][110];
 PIMAGE img[50];
 int guaiShu;
 
+// 动态缩放变量
 int tileW, tileH;
+
+// 距离计算函数 (平方距离)
+int getDistSq(int x1, int y1, int x2, int y2) {
+	return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
+}
 
 class Skill {
 public:
 	virtual ~Skill() = default;
 	virtual void use() {}
 };
+
 class Node {
 protected:
 	vector<unique_ptr<Skill>> skillBar;
-
 public:
-	int x, y; Tag t; int hp, hurt, p, q, id;
-	Node(int x = 0, int y = 0, Tag t = obc::none, int hp = 0, int hurt = 0, int p = 0, int q = 0)
-	: x(x), y(y), t(t), hp(hp), hurt(hurt), p(p), q(q), id(0) {}
+	int x, y; Tag t; int hp, hurt, p, q, id, k;
+	Node(int x = 0, int y = 0, Tag t = obc::none, int hp = 0, int hurt = 0, int p = 0, int q = 0, int k = 0)
+	: x(x), y(y), t(t), hp(hp), hurt(hurt), p(p), q(q), id(0), k(k) {}
 	virtual void useSkill() { for (auto &i : skillBar) i->use(); }
 };
 
@@ -49,20 +57,20 @@ private:
 		void use() override;
 	};
 public:
-	comzom(int x, int y, Tag t = obc::comzom, int hp = 10, int hurt = 2, int p = 300, int q = 1000)
-	: Node(x, y, t, hp, hurt, p, q) { skillBar.push_back(make_unique<Skill1>(this)); }
+	comzom(int x, int y, Tag t = obc::comzom, int hp = 10, int hurt = 2, int p = 300, int q = 1000, int k = 0)
+	: Node(x, y, t, hp, hurt, p, q, k) { skillBar.push_back(make_unique<Skill1>(this)); }
 };
 
 class drown : public Node {
 public:
-	drown(int x, int y, Tag t = obc::drown, int hp = 10, int hurt = 5, int p = 400, int q = 3000)
-	: Node(x, y, t, hp, hurt, p, q) {}
+	drown(int x, int y, Tag t = obc::drown, int hp = 10, int hurt = 5, int p = 400, int q = 3000, int k = 1)
+	: Node(x, y, t, hp, hurt, p, q, k) {}
 };
 
 class chickJock : public Node {
 public:
-	chickJock(int x, int y, Tag t = obc::chickJock, int hp = 10, int hurt = 2, int p = 200, int q = 700)
-	: Node(x, y, t, hp, hurt, p, q) {}
+	chickJock(int x, int y, Tag t = obc::chickJock, int hp = 10, int hurt = 2, int p = 200, int q = 700, int k = 0)
+	: Node(x, y, t, hp, hurt, p, q, k) {}
 };
 
 void comzom::Skill1::use() {
@@ -86,7 +94,7 @@ void comzom::Skill1::use() {
 }
 
 vector<unique_ptr<Node>> mons;
-Node player(0, 0, obc::player, 6, 0, 0, 0);
+Node player; // 玩家全局对象
 vector<deque<pair<int, int>>> qu;
 const int D[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
@@ -116,6 +124,13 @@ void paintFull(int t) {
 	putimage(0, 0, getwidth(), getheight(), img[t], 0, 0, getwidth(img[t]), getheight(img[t]));
 }
 
+void drawItemBar() {
+	int barTileW = getwidth() / 10;
+	for(int i = 0; i < 10; i++) {
+		putimage(i * barTileW, (mapX + 6) * tileH, barTileW, tileH, img[23], 0, 0, getwidth(img[23]), getheight(img[23]));
+	}
+}
+
 void painthart() {
 	int maxPerRow = mapY + 4;
 	for (int i = 0; i < min(maxPerRow, player.hp); i++) paint(mapX + 4, i, 14);
@@ -136,6 +151,7 @@ void pinatmap() {
 		paint(0, i, 11); paint(mapX + 3, i, 11);
 	}
 	painthart();
+	drawItemBar();
 }
 
 void makemap(int x, int y) {
@@ -191,13 +207,19 @@ int STATE = 0, maxType = 0, resultImgTag = 0;
 vector<timePoint> lastTime, lasthurt;
 
 void initGame() {
+	cout << "游戏开始\n";
 	if (maxhp > (mapY + 4) * 2) maxhp = (mapY + 4) * 2;
 	srand(time(0)); mons.clear(); qu.clear();
-	player = {0, 0, 5, maxhp, 0, 0, 0};
+	
+	// PR 逻辑初始化玩家: hp=maxhp, hurt=1, p=0, q=0, k=2 (给玩家2格攻击距离)
+	player = {0, 0, obc::player, maxhp, 1, 0, 0, 2}; 
+	
 	for (int i = 0; i <= mapX + 1; i++)
 		for (int j = 0; j <= mapY + 1; j++)
 			map[i][j] = Not[Rand({40, 30, 15, 1, 4})];
 	makemap(2 * (rand() % (mapX / 2) + 1), 2 * (rand() % (mapY / 2) + 1));
+	cout << "地图创建完成\n";
+	
 	maxType = 0;
 	for (int i = 0; i < guaiShu; i++) {
 		int type = Rand({20, 50, 30});
@@ -205,53 +227,93 @@ void initGame() {
 		if (type == 0) mons.push_back(make_unique<comzom>(xy.first, xy.second));
 		else if (type == 1) mons.push_back(make_unique<drown>(xy.first, xy.second));
 		else mons.push_back(make_unique<chickJock>(xy.first, xy.second));
-		mons.back()->id = i; qu.push_back(deque<pair<int, int>>()); 
-		getQu(i, 0, 0); maxType = max(maxType, type);
+		
+		mons.back()->id = i; 
+		qu.push_back(deque<pair<int, int>>()); 
+		getQu(i, 0, 0); 
+		maxType = max(maxType, type);
 	}
+	cout << "怪物生成完成. 本局怪数: " << guaiShu << endl;
+	cout << "怪物血量监控: \n";
+	
 	lastTime.assign(guaiShu, chrono::system_clock::now());
 	lasthurt.assign(guaiShu, chrono::system_clock::now());
 }
 
 void do_menu() {
 	paintFull(obc::zhudating);
-	putimage(300, 180, img[obc::start]);
+	putimage(300, 300, img[obc::start]);
 	while (mousemsg()) {
 		mouse_msg msg = getmouse();
 		if (msg.msg == mouse_msg_down && msg.is_left())
-			if (msg.x >= 300 && msg.y >= 180 && msg.x <= 618 && msg.y <= 342) {
+			if (msg.x >= 300 && msg.y >= 300 && msg.x <= 618 && msg.y <= 462) {
 				guaiShu = Rand({0, 60, 20, 15, 5}); initGame(); STATE = 1;
 			}
 	}
 }
 
 void do_game() {
-	for (auto& i : mons) i->useSkill();
+	// 1. 处理鼠标点击攻击 (PR 逻辑)
+	while(mousemsg()){
+		mouse_msg x = getmouse();
+		if(x.msg == mouse_msg_down && x.is_left()){
+			// 将鼠标坐标转换为网格坐标 (考虑 tileW/tileH 缩放和偏移)
+			int gridY = x.x / tileW - 1;
+			int gridX = x.y / tileH - 1;
+			for(int i = 0; i < (int)mons.size(); i++){
+				if(mons[i]->hp > 0 && mons[i]->x == gridX && mons[i]->y == gridY){
+					if(getDistSq(player.x, player.y, mons[i]->x, mons[i]->y) <= player.k * player.k){
+						mons[i]->hp -= player.hurt;
+						cout << i << " : " << mons[i]->hp << endl;
+						if(mons[i]->hp <= 0) cout << i << " is dead\n";
+					}
+				}
+			}
+		}
+	}
+
+	// 2. 怪物技能使用
+	for (auto& i : mons) if(i->hp > 0) i->useSkill();
+
+	// 3. 玩家键盘移动
 	if (GetAsyncKeyState(0x57) & 0x0001) goit(-1, 0, player);
 	if (GetAsyncKeyState(0x53) & 0x0001) goit(1, 0, player);
 	if (GetAsyncKeyState(0x41) & 0x0001) goit(0, -1, player);
 	if (GetAsyncKeyState(0x44) & 0x0001) goit(0, 1, player);
 
+	// 4. 怪物 AI 和 攻击判定 (PR 逻辑：使用平方距离判定攻击)
 	auto now = chrono::system_clock::now();
 	for (int i = 0; i < (int)mons.size(); i++) {
+		if(mons[i]->hp <= 0) continue;
+
+		// 移动逻辑
 		auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - lastTime[i]);
 		if (elapsed.count() >= mons[i]->p && !qu[i].empty()) {
 			pair<int,int> a = qu[i].front(); qu[i].pop_front();
 			goit(a.first, a.second, *mons[i]); lastTime[i] = now;
 		}
+
+		// 攻击判定逻辑
 		auto Elapsed = chrono::duration_cast<chrono::milliseconds>(now - lasthurt[i]);
-		if (Elapsed.count() >= mons[i]->q && player.x == mons[i]->x && player.y == mons[i]->y) {
-			player.hp -= mons[i]->hurt; lasthurt[i] = now;
+		if (Elapsed.count() >= mons[i]->q && getDistSq(player.x, player.y, mons[i]->x, mons[i]->y) <= mons[i]->k * mons[i]->k) {
+			player.hp -= mons[i]->hurt; 
+			lasthurt[i] = now;
 		}
 	}
     
-	paintFull(1); // 关键修复：每一帧先铺满背景图，防止黑块
+	// 5. 渲染
+	paintFull(1); 
 	pinatmap();
-	for (auto& m : mons) paint(m->x + 1, m->y + 1, m->t);
+	for (auto& m : mons) if(m->hp > 0) paint(m->x + 1, m->y + 1, m->t);
 	paint(player.x + 1, player.y + 1, player.t);
 	paint(mapX + 2, mapY + 2, obc::port);
 
-	if (player.x == mapX + 1 && player.y == mapY + 1) { maxhp += guaiShu * maxType; resultImgTag = obc::win; STATE = 2; }
-	else if (player.hp <= 0) { maxhp--; resultImgTag = obc::loss; STATE = 2; }
+	// 6. 胜利/失败判定
+	if (player.x == mapX + 1 && player.y == mapY + 1) { 
+		maxhp += guaiShu * maxType; resultImgTag = obc::win; STATE = 2; 
+	} else if (player.hp <= 0) { 
+		maxhp--; resultImgTag = obc::loss; STATE = 2; 
+	}
 }
 
 void do_result() {
@@ -270,7 +332,7 @@ int main() {
 	setrendermode(RENDER_MANUAL);
 
 	tileW = sw / (mapY + 4);
-	tileH = sh / (mapX + 6);
+	tileH = sh / (mapX + 7);
 
 	string lujing[100] {
 		"beijing.jpg", "caofangkuai.jpg",  "nitu.jpg", "chuansongmenfangkuai.jpg",
@@ -278,28 +340,29 @@ int main() {
 		"tiekuang.jpg", "jiangshi.jpg",    "jiyan.jpg", "kongbai.jpg",
 		"shibai.jpg", "xin.jpg", "kongxin.jpg", "gong.jpg", "jian.jpg",
 		"jiqishi.jpg", "nishi.jpg", "yujie.jpg", "zhudating.jpg",
-		"maoxianmoshi.jpg",
+		"maoxianmoshi.jpg", "wupinlan.jpg"
 	};
 
-	for (int i = 0; i < 22; i++) {
+	for (int i = 0; i < 23; i++) {
 		img[i + 1] = newimage();
 		string _ = "./caizhibao/" + lujing[i];
 		getimage(img[i + 1], _.c_str());
 	}
 
-	maxhp = 15;
+	maxhp = 60;
 	while (is_run()) {
-		if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) break; // 全局ESC退出
+		if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) break;
 		
 		cleardevice();
 		if (STATE == 0) do_menu();
 		else if (STATE == 1) do_game();
 		else if (STATE == 2) do_result();
 		
-		delay_fps(60);
+		delay_fps(50);
 	}
 
-	for (int i = 1; i <= 22; i++) delimage(img[i]);
+	for (int i = 1; i <= 23; i++) delimage(img[i]);
 	closegraph();
+	cout << "资源释放完毕";
 	return 0;
 }
