@@ -6,6 +6,7 @@
 #include <chrono>
 #include <windows.h>
 #include <vector>
+#include <fstream>
 #include <map>
 #include "Lencode.h"
 #define timePoint std::chrono::system_clock::time_point
@@ -329,15 +330,31 @@ void initGame() {
 
 void do_menu() {
 	paintFull(obc::zhudating);
-	putimage(300, 180, img[obc::start]);
+	putimage(100, 185, img[obc::start]);
+	putimage(550, 185, img[obc::cz]);
 	while (mousemsg()) {
 		mouse_msg msg = getmouse();
 		if (msg.msg == mouse_msg_down && msg.is_left())
-			if (msg.x >= 300 && msg.y >= 180 && msg.x <= 618 && msg.y <= 342) {
+			if (msg.x >= 100 && msg.y >= 185 && msg.x <= 418 && msg.y <= 347) {
 				if(guaiok)
 					guaiShu = Rand({0, 30, 30, 40, 10, 10});
 				initGame();
 				STATE = 1;
+			}else if(msg.x >= 550 && msg.y >= 185 && msg.x <= 868 && msg.y <= 347){
+				STATE = 0;
+				ofstream Cout("C:\\cundang\\1.txt");
+				Cout << 6 << endl;
+				Cout << 111 << ' ' << 112 << ' ';
+				for(int i = 1;i <= 8;i++)
+					Cout << 0 << ' ';
+				Cout << endl;
+				Cout.close();
+				ifstream Cin("C:\\cundang\\1.txt");
+				Cin >> maxhp;
+				for(int i = 0;i <= 9;i++)
+					Cin >> wupinlan[i];
+				Cin.close();
+				return;
 			}
 	}
 }
@@ -395,7 +412,7 @@ void do_game() {
 		}else if(x.is_right()){
 			if(x.is_down()){
 				if(wupinlan[At] / 100 == 2 && getDistSq(x.y / tileH - 1,x.x / tileW - 1,player.x,player.y) <= player.k * player.k
-				   && Map[x.y / tileH - 1][x.x / tileW - 1] == 1){
+				&& Map[x.y / tileH - 1][x.x / tileW - 1] == 1){
 					Map[x.y / tileH - 1][x.x / tileW - 1] = wupinlan[At] % 200;
 					wupinlan[At] = 0;
 				}
@@ -478,14 +495,26 @@ int main() {
 	int realW = getwidth();
 	int realH = getheight();
 
+	if(CreateDirectory("C:\\cundang", NULL)){
+		ofstream Cout("C:\\cundang\\1.txt");
+		Cout << 6 << endl;
+		Cout << 111 << ' ' << 112 << ' ';
+		for(int i = 1;i <= 8;i++)
+			Cout << 0 << ' ';
+		Cout << endl;
+		Cout.close();
+	}
+	ifstream Cin("C:\\cundang\\1.txt");
+	Cin >> maxhp;
+	for(int i = 0;i <= 9;i++)
+		Cin >> wupinlan[i];
+	Cin.close();
 	// 总逻辑行数：mapX + 4(地图围墙) + 1(血条) + 1(物品栏) + 1(底部缓冲) = mapX + 7
 	tileW = realW / (mapY + 4);
 	tileH = realH / (mapX + 7);
 
 	wupin[111] = {0, 0, obc::mjb, 0, 1, 0, 0, 0, 10};
-	wupinlan[0] = 111;
 	wupin[112] = {0, 0, obc::sjb, 0, 2, 0, 0, 0, 0};
-	wupinlan[1] = 112;
 	wupindiaoluo[111] = {0, 0, obc::mj, 0, 1, 0, 0, 0, 10};
 	wupindiaoluo[112] = {0, 0, obc::sj, 0, 2, 0, 0, 0, 0};
 	for (auto i : Not){
@@ -500,15 +529,14 @@ int main() {
 		"shibai.jpg", "xin.jpg", "kongxin.jpg", "gong.jpg", "jian.jpg",
 		"jiqishi.jpg", "nishi.jpg", "zhudating.jpg", "maoxianmoshi.jpg",
 		"wupinlan.jpg", "mujian.jpg", "mujianblack.jpg", "wupinlanat.jpg",
-		"shijian.jpg", "shijianblack.jpg", "zhizhu.jpg"
+		"shijian.jpg", "shijianblack.jpg", "zhizhu.jpg","chongzhi.jpg",
 	};
 
-	for (int i = 0; i < 28; i++) {
+	for (int i = 0; i < 29; i++) {
 		img[i + 1] = newimage();
 		string _ = "./caizhibao/" + lujing[i];
 		getimage(img[i + 1], _.c_str());
-	}
-	maxhp = 6; 
+	} 
 	while (is_run()) {
 		if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) break;
 		cleardevice();
@@ -517,8 +545,13 @@ int main() {
 		else if (STATE == 2) do_result();
 		delay_fps(60);
 	}
-
-	for (int i = 1; i <= 28; i++) delimage(img[i]);
+	
+	ofstream Cout("C:\\cundang\\1.txt");
+	Cout << maxhp << endl;
+	for(int i = 0;i < 10;i++)
+		Cout << wupinlan[i] << ' ';
+	Cout.close(); 
+	for (int i = 1; i <= 29; i++) delimage(img[i]);
 	closegraph();
 	cout << "资源释放完毕";
 	return 0;

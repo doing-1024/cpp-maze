@@ -50,7 +50,8 @@ namespace obc{//object encode list ¶ÔÏó±àÂëÁÐ±í
 		sj = 26,         // Ê¯½£ 
 		shijianblack = 27,// Ê¯½£»ÒÉ«±³¾° 
 		sjb = 27,         // Ê¯½£»ÒÉ«±³¾° 
-		zhizhu = 28,     // Ö©Öë 
+		zhizhu = 28,     // Ö©Öë
+		cz = 29,   // ÖØÖÃ 
 	};
 }
 /*
