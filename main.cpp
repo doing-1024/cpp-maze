@@ -8,6 +8,7 @@
 #include <vector>
 #include <fstream>
 #include <map>
+#include <cmath>
 #include "Lencode.h"
 #define timePoint std::chrono::system_clock::time_point
 
@@ -144,6 +145,12 @@ bool ok(int x) {
 	return true;
 }
 
+bool heartWaveActive = false;
+timePoint lastHurtTime;
+const int HEART_WAVE_DURATION = 800;
+const double HEART_WAVE_AMPLITUDE = 3.0;
+const double HEART_WAVE_FREQUENCY = 2.0;
+
 bool quok;
 void dfsGetQu(int t, int x1, int y1, int x, int y) {
 	if (x1 == x && y1 == y) {
@@ -169,8 +176,8 @@ void getQu(int t, int x, int y) {
 	dfsGetQu(t, mons[t]->x, mons[t]->y, x, y);
 }
 
-void paint(int x, int y, int t) {
-	putimage(y * tileW, x * tileH, tileW, tileH, img[t], 0, 0, getwidth(img[t]), getheight(img[t]));
+void paint(int x, int y, int t, int offsetY = 0) {
+	putimage(y * tileW, x * tileH + offsetY, tileW, tileH, img[t], 0, 0, getwidth(img[t]), getheight(img[t]));
 }
 
 void paintFull(int t) {
@@ -178,10 +185,35 @@ void paintFull(int t) {
 }
 
 void painthart() {
-	int row = mapX + 4; // 围墙 mapX+3 之后的第一行
+	int row = mapX + 4;
 	int maxPerRow = mapY + 4;
-	for (int i = 0; i < min(maxPerRow, player.hp); i++) paint(row, i, obc::heart);
-	for (int i = min(maxPerRow, player.hp); i < min(maxPerRow, maxhp); i++) paint(row, i, obc::vheart);
+	
+	auto now = chrono::system_clock::now();
+	if (heartWaveActive) {
+		auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - lastHurtTime);
+		if (elapsed.count() >= HEART_WAVE_DURATION) {
+			heartWaveActive = false;
+		}
+	}
+	
+	for (int i = 0; i < min(maxPerRow, player.hp); i++) {
+		int offsetY = 0;
+		if (heartWaveActive) {
+			auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - lastHurtTime);
+			double phase = (elapsed.count() * 0.001 * HEART_WAVE_FREQUENCY) - (i * 0.3);
+			offsetY = (int)(sin(phase * 3.14159 * 2) * HEART_WAVE_AMPLITUDE);
+		}
+		paint(row, i, obc::heart, offsetY);
+	}
+	for (int i = min(maxPerRow, player.hp); i < min(maxPerRow, maxhp); i++) {
+		int offsetY = 0;
+		if (heartWaveActive) {
+			auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - lastHurtTime);
+			double phase = (elapsed.count() * 0.001 * HEART_WAVE_FREQUENCY) - (i * 0.3);
+			offsetY = (int)(sin(phase * 3.14159 * 2) * HEART_WAVE_AMPLITUDE);
+		}
+		paint(row, i, obc::vheart, offsetY);
+	}
 }
 
 void drawItemBar() {
@@ -332,7 +364,7 @@ void initGame() {
 	}
 	lastTime.assign(guaiShu, chrono::system_clock::now());
 	lasthurt.assign(guaiShu, chrono::system_clock::now());
-	watime = lasthp = chrono::system_clock::now();
+	watime = lasthp = lastHurtTime = chrono::system_clock::now();
 }
 
 void do_menu() {
@@ -454,6 +486,8 @@ void do_game() {
 		if (Elapsed.count() >= mons[i]->q && getDistSq(player.x, player.y, mons[i]->x, mons[i]->y) <= mons[i]->k * mons[i]->k) {
 			player.hp -= mons[i]->hurt;
 			lasthurt[i] = now;
+			heartWaveActive = true;
+			lastHurtTime = now;
 		}
 	}
 
