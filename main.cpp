@@ -12,7 +12,7 @@
 #define timePoint std::chrono::system_clock::time_point
 
 const int INF = 0x7f7f7f7f;
-const bool guaiok = 1; // 是否启用怪物生成 
+const bool guaiok = 1; // 是否启用怪物生成
 using namespace std;
 
 int Map[110][110], mapX = 13, mapY = 23, maxhp;
@@ -126,7 +126,14 @@ void comzom::Skill1::use() {
 	}
 }
 
-map<int, Node> wupin,wupindiaoluo;
+class nodeWP {
+public:
+	Tag t;
+	int hp, hurt, wa;
+	nodeWP(Tag t = obc::none, int hp = 0, int hurt = 0, int wa = 0)
+	: t(t), hp(hp), hurt(hurt), wa(wa) {}
+};
+map<int, nodeWP> wupin, wupindiaoluo;
 vector<unique_ptr<Node>> mons;
 Node player;
 vector<deque<pair<int, int>>> qu;
@@ -197,7 +204,7 @@ void drawItemBar() {
 void pinatmap() {
 	for (int i = 0; i <= mapX + 1; i++) {
 		paint(i + 1, 0, obc::bedrock);
-		for (int j = 0; j <= mapY + 1; j++) paint(i + 1, j + 1, Map[i][j]);
+		for (int j = 0; j <= mapY + 1; j++) paint(i + 1, j + 1, abs(Map[i][j]));
 		paint(i + 1, mapY + 3, obc::bedrock);
 	}
 	for (int i = 0; i <= mapY + 3; i++) {
@@ -336,22 +343,22 @@ void do_menu() {
 		mouse_msg msg = getmouse();
 		if (msg.msg == mouse_msg_down && msg.is_left())
 			if (msg.x >= 100 && msg.y >= 185 && msg.x <= 418 && msg.y <= 347) {
-				if(guaiok)
+				if (guaiok)
 					guaiShu = Rand({0, 30, 30, 40, 10, 10});
 				initGame();
 				STATE = 1;
-			}else if(msg.x >= 550 && msg.y >= 185 && msg.x <= 868 && msg.y <= 347){
+			} else if (msg.x >= 550 && msg.y >= 185 && msg.x <= 868 && msg.y <= 347) {
 				STATE = 0;
 				ofstream Cout("C:\\cundang\\1.txt");
 				Cout << 6 << endl;
-				Cout << 111 << ' ' << 112 << ' ';
-				for(int i = 1;i <= 8;i++)
+				Cout << 111 << ' ' << 112 << ' ' << 121 << ' ' << 200 + obc::dia << ' ';
+				for (int i = 1; i <= 6; i++)
 					Cout << 0 << ' ';
 				Cout << endl;
 				Cout.close();
 				ifstream Cin("C:\\cundang\\1.txt");
 				Cin >> maxhp;
-				for(int i = 0;i <= 9;i++)
+				for (int i = 0; i <= 9; i++)
 					Cin >> wupinlan[i];
 				Cin.close();
 				return;
@@ -366,7 +373,7 @@ void do_game() {
 	if (GetAsyncKeyState(0x53) & 0x0001) goit(1, 0, player);
 	if (GetAsyncKeyState(0x41) & 0x0001) goit(0, -1, player);
 	if (GetAsyncKeyState(0x44) & 0x0001) goit(0, 1, player);
-	if ((GetAsyncKeyState('Q') & 0x0001)&&wupinlan[At]){
+	if ((GetAsyncKeyState('Q') & 0x0001) && wupinlan[At]) {
 		diaoluo[player.x][player.y].push(wupinlan[At]);
 		wupinlan[At] = 0;
 	}
@@ -374,7 +381,7 @@ void do_game() {
 	for (char x = '1'; x <= '9'; x++)
 		if (GetAsyncKeyState(x) & 0x0001) nextat = x - '1';
 	if (GetAsyncKeyState('0') & 0x0001) nextat = 9;
-	if(nextat != 255&&nextat != At){
+	if (nextat != 255 && nextat != At) {
 		At = nextat;
 		watime = chrono::system_clock::now();
 	}
@@ -395,24 +402,20 @@ void do_game() {
 				watime = chrono::system_clock::now();
 			}
 			if (downok && !leftok) {
-				if (Map[gridX][gridY] == 1) {
-					for (auto& m : mons) {
-						if (m->hp > 0 && gridX == m->x && gridY == m->y) {
-							if (getDistSq(player.x, player.y, m->x, m->y) <= player.k * player.k) {
+				if (Map[gridX][gridY] == 1)
+					for (auto& m : mons)
+						if (m->hp > 0 && gridX == m->x && gridY == m->y)
+							if (getDistSq(player.x, player.y, m->x, m->y) <= player.k * player.k)
 								m->hp -= player.hurt + wupin[wupinlan[At]].hurt;
-							}
-						}
-					}
-				}
 				if (wax != gridX || way != gridY) {
 					wax = gridX, way = gridY;
 					watime = chrono::system_clock::now();
 				}
 			}
-		}else if(x.is_right()){
-			if(x.is_down()){
-				if(wupinlan[At] / 100 == 2 && getDistSq(x.y / tileH - 1,x.x / tileW - 1,player.x,player.y) <= player.k * player.k
-				&& Map[x.y / tileH - 1][x.x / tileW - 1] == 1){
+		} else if (x.is_right()) {
+			if (x.is_down()) {
+				if (wupinlan[At] / 100 == 2 && getDistSq(x.y / tileH - 1, x.x / tileW - 1, player.x, player.y) <= player.k * player.k
+				    && Map[x.y / tileH - 1][x.x / tileW - 1] == 1) {
 					Map[x.y / tileH - 1][x.x / tileW - 1] = wupinlan[At] % 200;
 					wupinlan[At] = 0;
 				}
@@ -425,10 +428,10 @@ void do_game() {
 			wax = gridX;
 			way = gridY;
 			watime = chrono::system_clock::now();
-		}else if(P.count() >= Map2[wax][way].first * 1000){
+		} else if (P.count() >= Map2[wax][way].first * 1000) {
 			watime = chrono::system_clock::now();
-			if(Map[wax][way] > 1&& player.wa + wupin[wupinlan[At]].wa >= Map2[wax][way].second
-			&& getDistSq(wax,way,player.x,player.y) <= player.k * player.k){
+			if (Map[wax][way] > 1 && player.wa + wupin[wupinlan[At]].wa >= Map2[wax][way].second
+			    && getDistSq(wax, way, player.x, player.y) <= player.k * player.k) {
 				diaoluo[wax][way].push(200 + Map[wax][way]);
 				Map[wax][way] = 1;
 				leftok = 1;
@@ -443,7 +446,7 @@ void do_game() {
 		if (elapsed.count() >= mons[i]->p && !qu[i].empty()) {
 			pair<int, int> a = qu[i].front();
 			lastTime[i] = now;
-			if(goit(a.first, a.second, *mons[i])){
+			if (goit(a.first, a.second, *mons[i])) {
 				qu[i].pop_front();
 			}
 		}
@@ -495,33 +498,40 @@ int main() {
 	int realW = getwidth();
 	int realH = getheight();
 
-	if(CreateDirectory("C:\\cundang", NULL)){
+	if (CreateDirectory("C:\\cundang", NULL)) {
 		ofstream Cout("C:\\cundang\\1.txt");
 		Cout << 6 << endl;
-		Cout << 111 << ' ' << 112 << ' ';
-		for(int i = 1;i <= 8;i++)
+		Cout << 111 << ' ' << 112 << ' ' << 121 << ' ';
+		for (int i = 1; i <= 8; i++)
 			Cout << 0 << ' ';
 		Cout << endl;
 		Cout.close();
 	}
 	ifstream Cin("C:\\cundang\\1.txt");
 	Cin >> maxhp;
-	for(int i = 0;i <= 9;i++)
+	for (int i = 0; i <= 9; i++)
 		Cin >> wupinlan[i];
 	Cin.close();
 	// 总逻辑行数：mapX + 4(地图围墙) + 1(血条) + 1(物品栏) + 1(底部缓冲) = mapX + 7
 	tileW = realW / (mapY + 4);
 	tileH = realH / (mapX + 7);
 
-	wupin[111] = {0, 0, obc::mjb, 0, 1, 0, 0, 0, 10};
-	wupin[112] = {0, 0, obc::sjb, 0, 2, 0, 0, 0, 0};
-	wupindiaoluo[111] = {0, 0, obc::mj, 0, 1, 0, 0, 0, 10};
-	wupindiaoluo[112] = {0, 0, obc::sj, 0, 2, 0, 0, 0, 0};
-	for (auto i : Not){
-		wupin[200 + i] = {0, 0, (unsigned char)i, 0, 0, 0, 0, 0, 0};
-		wupindiaoluo[200 + i] = {0, 0, (unsigned char)i, 0, 0, 0, 0, 0, 0};
+	wupin[111] = nodeWP(obc::mjb, 10, 1, 0);
+	wupindiaoluo[111] = nodeWP(obc::mj, 10, 1, 0);
+	//木剑
+	wupin[112] = nodeWP(obc::sjb, 20, 2, 0);
+	wupindiaoluo[112] = nodeWP(obc::sj, 20, 2, 0);
+	//石剑
+	wupin[121] = nodeWP(obc::mgb, 10, 0, 1);
+	wupindiaoluo[121] = nodeWP(obc::mg, 10, 0, 1);	
+	//木稿 
+	for (auto i : Not) {
+		wupin[200 + i] = nodeWP((unsigned char)i, 0, 0, 0);
+		wupindiaoluo[200 + i] = nodeWP((unsigned char)i, 0, 0, 0);
 	}
-	
+	wupindiaoluo[200 + obc::dia] = nodeWP((unsigned char)obc::dia3, 0, 0, 0);
+	wupin[200 + obc::dia] = nodeWP((unsigned char)obc::dia2, 0, 0, 0);
+	//方块
 	string lujing[100] {
 		"beijing.jpg", "caofangkuai.jpg",  "nitu.jpg", "chuansongmenfangkuai.jpg",
 		"wanjia.jpg", "shenglitupian.jpg", "yuanshi.jpg", "zuanshikuang.jpg",
@@ -529,14 +539,15 @@ int main() {
 		"shibai.jpg", "xin.jpg", "kongxin.jpg", "gong.jpg", "jian.jpg",
 		"jiqishi.jpg", "nishi.jpg", "zhudating.jpg", "maoxianmoshi.jpg",
 		"wupinlan.jpg", "mujian.jpg", "mujianblack.jpg", "wupinlanat.jpg",
-		"shijian.jpg", "shijianblack.jpg", "zhizhu.jpg","chongzhi.jpg",
+		"shijian.jpg", "shijianblack.jpg", "zhizhu.jpg", "chongzhi.jpg","mugao.jpg",
+		"mugaob.jpg","zuanshib.jpg","zuanshi.jpg" 
 	};
 
-	for (int i = 0; i < 29; i++) {
+	for (int i = 0; i < 33; i++) {
 		img[i + 1] = newimage();
 		string _ = "./caizhibao/" + lujing[i];
 		getimage(img[i + 1], _.c_str());
-	} 
+	}
 	while (is_run()) {
 		if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) break;
 		cleardevice();
@@ -545,13 +556,13 @@ int main() {
 		else if (STATE == 2) do_result();
 		delay_fps(60);
 	}
-	
+
 	ofstream Cout("C:\\cundang\\1.txt");
 	Cout << maxhp << endl;
-	for(int i = 0;i < 10;i++)
+	for (int i = 0; i < 10; i++)
 		Cout << wupinlan[i] << ' ';
-	Cout.close(); 
-	for (int i = 1; i <= 29; i++) delimage(img[i]);
+	Cout.close();
+	for (int i = 1; i <= 33; i++) delimage(img[i]);
 	closegraph();
 	cout << "资源释放完毕";
 	return 0;
