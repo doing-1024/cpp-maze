@@ -140,6 +140,8 @@ Node player;
 vector<deque<pair<int, int>>> qu;
 const int D[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
+float dropItemAngle[110][110] = {0};
+
 bool ok(int x) {
 	for (int i = 0; i <= 4; i++) if (x == Not[i]) return false;
 	return true;
@@ -247,7 +249,38 @@ void pinatmap() {
 		for (int j = 0; j <= mapY + 1; j++) {
 			if (!diaoluo[i][j].empty()) {
 				int x = i + 1, y = j + 1, t = wupindiaoluo[diaoluo[i][j].front()].t;
-				putimage(y * tileW + 4, x * tileH + 5, tileW * 0.7, tileH * 0.7, img[t], 0, 0, getwidth(img[t]), getheight(img[t]));
+				dropItemAngle[i][j] += 0.08f;
+				if (dropItemAngle[i][j] > 6.28318f) dropItemAngle[i][j] -= 6.28318f;
+				
+				float angle = dropItemAngle[i][j];
+				float scale = fabsf(cosf(angle));
+				int srcW = getwidth(img[t]);
+				int srcH = getheight(img[t]);
+				int dstW = (int)(tileW * 0.7f * scale);
+				int dstH = tileH * 0.7;
+				
+				if (dstW < 1) dstW = 1;
+				
+				PIMAGE rot = newimage(dstW, dstH);
+				setfillcolor(BLACK);
+				cleardevice(rot);
+				
+				float scaleX = (float)srcW / dstW;
+				float scaleY = (float)srcH / dstH;
+				
+				for (int dy = 0; dy < dstH; dy++) {
+					for (int dx = 0; dx < dstW; dx++) {
+						int sx = (int)(dx * scaleX);
+						int sy = (int)(dy * scaleY);
+						if (sx >= 0 && sx < srcW && sy >= 0 && sy < srcH) {
+							color_t col = getpixel(sx, sy, img[t]);
+							putpixel(dx, dy, col, rot);
+						}
+					}
+				}
+				int offsetX = (tileW * 0.7 - dstW) / 2;
+				putimage(y * tileW + 4 + offsetX, x * tileH + 5, rot);
+				delimage(rot);
 			}
 		}
 	painthart();
@@ -349,6 +382,7 @@ void initGame() {
 			Map[i][j] = Not[p];
 			Map2[i][j] = Not2[p];
 			while (!diaoluo[i][j].empty())   diaoluo[i][j].pop();
+			dropItemAngle[i][j] = 0;
 		}
 	makemap(2 * (rand() % (mapX / 2) + 1), 2 * (rand() % (mapY / 2) + 1));
 	for (int i = 0; i < guaiShu; i++) {
