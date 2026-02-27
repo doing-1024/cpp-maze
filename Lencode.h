@@ -1,71 +1,76 @@
 #pragma once
 #define Tag ObTag
 #include<stdint.h>
-//coder name:liuruizhou，AI：doubao 
+//coder name:liuruizhou拢卢AI拢潞doubao 
 /*
-这个可以让我们不用记hyj的编码，直接输入名称就行 
+脮芒赂枚驴脡脪脭脠脙脦脪脙脟虏禄脫脙录脟hyj碌脛卤脿脗毛拢卢脰卤陆脫脢盲脠毛脙没鲁脝戮脥脨脨 
 */
-//把每个对象的编码转化成字符 
-typedef uint8_t ObTag;//统一的t的运用
-namespace obc{//object encode list 对象编码列表
+//掳脩脙驴赂枚露脭脧贸碌脛卤脿脗毛脳陋禄炉鲁脡脳脰路没 
+typedef uint8_t ObTag;//脥鲁脪禄碌脛t碌脛脭脣脫脙
+namespace obc{//object encode list 露脭脧贸卤脿脗毛脕脨卤铆
 	enum encode{
-		backGround = 1,  // BG的别名
-		BG = 1,          // 背景
-		grass = 2,       // 草方块
-		soil = 3,        // 泥土
-		portal = 4,      // 传送门方块
-		port = 4,        // portal的别名
-		player = 5,      // 玩家
-		win = 6,         // 胜利图片
-		stone = 7,       // 原石
-		diamond = 8,     // 钻石矿
-		dia = 8,         // diamond的别名
-		iron = 9,        // 铁矿
-		zombie = 10,     // 僵尸
-		comzom = 10,	 // 普通僵尸别名
-		bedrock = 11,    // 基岩
-		none = 12,       // 空白
-		blank = 12,      // 真实的空白 
-		loss = 13,       // 失败 
-		heart = 14,      // 心
-		vheart = 15,     // 空心
-		bow = 16,        // 弓
-		arrow = 17,      // 箭 
-		arr = 17,        // arrow的别名
-		chickenJockey=18,// 鸡骑士
-		chickJock=18,    // 简称
-		CJ = 18,         // 简称*2
-		drowned = 19,    // 溺尸
-		drown = 19,      // 溺尸别名
-		zhudating = 20,  // 主大厅
-		start = 21,      // 开始按钮 
-		wupinlan = 22,	 // 物品栏
-		mujian = 23,	 // 木剑 
-		mj = 23,	     // 木剑
-		mujianblack = 24,// 木剑灰色背景
-		mjb = 24,		 // 木剑灰色背景
-		wupinlanw = 25,  // 白框物品栏
-		wplat = 25        // 白框物品栏
+		backGround = 1,  // BG碌脛卤冒脙没
+		BG = 1,          // 卤鲁戮掳
+		grass = 2,       // 虏脻路陆驴茅
+		soil = 3,        // 脛脿脥脕
+		portal = 4,      // 麓芦脣脥脙脜路陆驴茅
+		port = 4,        // portal碌脛卤冒脙没
+		player = 5,      // 脥忙录脪
+		win = 6,         // 脢陇脌没脥录脝卢
+		stone = 7,       // 脭颅脢炉
+		diamond = 8,     // 脳锚脢炉驴贸
+		dia = 8,         // diamond碌脛卤冒脙没
+		iron = 9,        // 脤煤驴贸
+		zombie = 10,     // 陆漏脢卢
+		comzom = 10,	 // 脝脮脥篓陆漏脢卢卤冒脙没
+		bedrock = 11,    // 禄霉脩脪
+		none = 12,       // 驴脮掳脳
+		blank = 12,      // 脮忙脢碌碌脛驴脮掳脳 
+		loss = 13,       // 脢搂掳脺 
+		heart = 14,      // 脨脛
+		vheart = 15,     // 驴脮脨脛
+		bow = 16,        // 鹿颅
+		arrow = 17,      // 录媒 
+		arr = 17,        // arrow碌脛卤冒脙没
+		chickenJockey=18,// 录娄脝茂脢驴
+		chickJock=18,    // 录貌鲁脝
+		CJ = 18,         // 录貌鲁脝*2
+		drowned = 19,    // 脛莽脢卢
+		drown = 19,      // 脛莽脢卢卤冒脙没
+		zhudating = 20,  // 脰梅麓贸脤眉
+		start = 21,      // 驴陋脢录掳麓脜楼 
+		wupinlan = 22,	 // 脦茂脝路脌赂
+		mujian = 23,	 // 脛戮陆拢 
+		mj = 23,	     // 脛戮陆拢
+		mujianblack = 24,// 脛戮陆拢禄脪脡芦卤鲁戮掳
+		mjb = 24,		 // 脛戮陆拢禄脪脡芦卤鲁戮掳
+		wupinlanw = 25,  // 掳脳驴貌脦茂脝路脌赂
+		wplat = 25,      // 掳脳驴貌脦茂脝路脌赂
+		shijian = 26,    // 脢炉陆拢
+		sj = 26,         // 脢炉陆拢 
+		shijianblack = 27,// 脢炉陆拢禄脪脡芦卤鲁戮掳 
+		sjb = 27,         // 脢炉陆拢禄脪脡芦卤鲁戮掳 
+		zhizhu = 28,     // 脰漏脰毛 
 	};
 }
 /*
-1:背景.jpg
-2:草方块.jpg
-3:泥土.jpg
-4:传送门方块.jpg
-5:玩家.jpg
-6:胜利图片.jpg
-7:原石.jpg
-8:钻石矿.jpg
-9:铁矿.jpg
-10:僵尸.jpg
-11:基岩.jpg
-12:空白.jpg
-13:失败.jpg
-14:心.jpg
-15:空心.jpg
-16:弓.jpg
-17:箭.jpg
-18:鸡骑士.jpg
-19:溺尸.jpg
+1:卤鲁戮掳.jpg
+2:虏脻路陆驴茅.jpg
+3:脛脿脥脕.jpg
+4:麓芦脣脥脙脜路陆驴茅.jpg
+5:脥忙录脪.jpg
+6:脢陇脌没脥录脝卢.jpg
+7:脭颅脢炉.jpg
+8:脳锚脢炉驴贸.jpg
+9:脤煤驴贸.jpg
+10:陆漏脢卢.jpg
+11:禄霉脩脪.jpg
+12:驴脮掳脳.jpg
+13:脢搂掳脺.jpg
+14:脨脛.jpg
+15:驴脮脨脛.jpg
+16:鹿颅.jpg
+17:录媒.jpg
+18:录娄脝茂脢驴.jpg
+19:脛莽脢卢.jpg
 */
