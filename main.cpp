@@ -147,6 +147,60 @@ bool ok(int x) {
 	return true;
 }
 
+bool bfsCanReach(int sx, int sy, int tx, int ty) {
+    if (!ok(Map[tx][ty])) return false;
+    bool visited[110][110] = {0};
+    queue<pair<int, int>> q;
+    q.push({sx, sy});
+    visited[sx][sy] = true;
+    while (!q.empty()) {
+        auto [x, y] = q.front();
+        q.pop();
+        if (x == tx && y == ty) return true;
+        for (int i = 0; i < 4; i++) {
+            int nx = x + D[i][0], ny = y + D[i][1];
+            if (nx >= 0 && ny >= 0 && nx <= mapX + 1 && ny <= mapY + 1 && 
+                !visited[nx][ny] && ok(Map[nx][ny])) {
+                visited[nx][ny] = true;
+                q.push({nx, ny});
+            }
+        }
+    }
+    return false;
+}
+
+deque<pair<int, int>> bfsFindPath(int sx, int sy, int tx, int ty) {
+    deque<pair<int, int>> path;
+    if (!bfsCanReach(sx, sy, tx, ty)) return path;
+    bool visited[110][110] = {0};
+    pair<int, int> parent[110][110];
+    queue<pair<int, int>> q;
+    q.push({sx, sy});
+    visited[sx][sy] = true;
+    while (!q.empty()) {
+        auto [x, y] = q.front();
+        q.pop();
+        if (x == tx && y == ty) break;
+        for (int i = 0; i < 4; i++) {
+            int nx = x + D[i][0], ny = y + D[i][1];
+            if (nx >= 0 && ny >= 0 && nx <= mapX + 1 && ny <= mapY + 1 && 
+                !visited[nx][ny] && ok(Map[nx][ny])) {
+                visited[nx][ny] = true;
+                parent[nx][ny] = {x, y};
+                q.push({nx, ny});
+            }
+        }
+    }
+    int cx = tx, cy = ty;
+    while (cx != sx || cy != sy) {
+        auto [px, py] = parent[cx][cy];
+        path.push_front({cx - px, cy - py});
+        cx = px;
+        cy = py;
+    }
+    return path;
+}
+
 bool heartWaveActive = false;
 timePoint lastHurtTime;
 const int HEART_WAVE_DURATION = 800;
@@ -344,6 +398,20 @@ bool goit(int x, int y, Node& t) {
 	return 0;
 }
 
+void randomWalk(Node& m) {
+    vector<pair<int, int>> validMoves;
+    for (int i = 0; i < 4; i++) {
+        int nx = m.x + D[i][0], ny = m.y + D[i][1];
+        if (nx >= 0 && ny >= 0 && nx <= mapX + 1 && ny <= mapY + 1 && ok(Map[nx][ny])) {
+            validMoves.push_back({D[i][0], D[i][1]});
+        }
+    }
+    if (!validMoves.empty()) {
+        int idx = rand() % validMoves.size();
+        goit(validMoves[idx].first, validMoves[idx].second, m);
+    }
+}
+
 int Rand(vector<int> x) {
 	int n = 0;
 	for (int i : x) n += i;
@@ -509,11 +577,18 @@ void do_game() {
 	for (int i = 0; i < (int)mons.size(); i++) {
 		if (mons[i]->hp <= 0) continue;
 		auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - lastTime[i]);
-		if (elapsed.count() >= mons[i]->p && !qu[i].empty()) {
-			pair<int, int> a = qu[i].front();
+		if (elapsed.count() >= mons[i]->p) {
 			lastTime[i] = now;
-			if (goit(a.first, a.second, *mons[i])) {
-				qu[i].pop_front();
+			if (bfsCanReach(mons[i]->x, mons[i]->y, player.x, player.y)) {
+				qu[i] = bfsFindPath(mons[i]->x, mons[i]->y, player.x, player.y);
+				if (!qu[i].empty()) {
+					pair<int, int> a = qu[i].front();
+					if (goit(a.first, a.second, *mons[i])) {
+						qu[i].pop_front();
+					}
+				}
+			} else {
+				randomWalk(*mons[i]);
 			}
 		}
 		auto Elapsed = chrono::duration_cast<chrono::milliseconds>(now - lasthurt[i]);
