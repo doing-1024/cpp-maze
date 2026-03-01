@@ -13,10 +13,18 @@
 #define timePoint std::chrono::system_clock::time_point
 
 const int INF = 0x7f7f7f7f;
-const bool guaiok = 1; // 是否启用怪物生成
+const bool guaiok = 1;
 using namespace std;
 
-int Map[110][110], mapX = 13, mapY = 23, maxhp;
+int Map[110][110];
+const int mapTotalX = 50;
+const int mapTotalY = 50;
+int mapX = mapTotalX, mapY = mapTotalY;
+const int viewH = 13; 
+const int viewW = 23;
+int camX = 0, camY = 0;
+
+int maxhp;
 int Not[30] = {obc::grass, obc::soil, obc::stone, obc::dia, obc::iron};
 bool game_, MAP[110][110];
 PIMAGE img[50];
@@ -24,7 +32,8 @@ int guaiShu;
 pair<int, int> Map2[110][110], Not2[30] = {{3, 0}, {3, 0}, {5, 1}, {10, 3}, {5, 2}};
 int tileW, tileH;
 
-int wupinlan[10], At; // 物品栏  当前选择
+int wupinlan[10], wupinlanCnt[10], At;
+const int MAX_STACK = 99;
 
 queue<int> diaoluo[110][110];
 
@@ -44,9 +53,9 @@ protected:
 public:
 	int x, y;
 	Tag t;
-	int hp, hurt, p, q, id, k, wa;
+	int hp, maxhp, hurt, p, q, id, k, wa;
 	Node(int x = 0, int y = 0, Tag t = obc::none, int hp = 0, int hurt = 0, int p = 0, int q = 0, int k = 0, int wa = 0)
-	: x(x), y(y), t(t), hp(hp), hurt(hurt), p(p), q(q), id(0), k(k), wa(wa) {}
+	: x(x), y(y), t(t), hp(hp), maxhp(hp), hurt(hurt), p(p), q(q), id(0), k(k), wa(wa) {}
 	virtual void useSkill() {
 		for (auto &i : skillBar) i->use();
 	}
@@ -91,7 +100,7 @@ public:
 };
 
 void comzom::Skill1::use() {
-	if (maxhp < 15) return;
+	if (::maxhp < 15) return;
 	if (state == 0) {
 		last = chrono::system_clock::now();
 		state = 1;
@@ -143,62 +152,81 @@ const int D[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 float dropItemAngle[110][110] = {0};
 
 bool ok(int x) {
+  if (x == obc::bedrock) return false;
 	for (int i = 0; i <= 4; i++) if (x == Not[i]) return false;
 	return true;
 }
 
+bool addToInventory(int itemId) {
+	if (itemId == 0) return false;
+	for (int i = 0; i < 10; i++) {
+		if (wupinlan[i] == itemId && wupinlanCnt[i] < MAX_STACK) {
+			wupinlanCnt[i]++;
+			return true;
+		}
+	}
+	for (int i = 0; i < 10; i++) {
+		if (wupinlan[i] == 0) {
+			wupinlan[i] = itemId;
+			wupinlanCnt[i] = 1;
+			return true;
+		}
+	}
+	return false;
+}
+
 bool bfsCanReach(int sx, int sy, int tx, int ty) {
-    if (!ok(Map[tx][ty])) return false;
-    bool visited[110][110] = {0};
-    queue<pair<int, int>> q;
-    q.push({sx, sy});
-    visited[sx][sy] = true;
-    while (!q.empty()) {
-        auto [x, y] = q.front();
-        q.pop();
-        if (x == tx && y == ty) return true;
-        for (int i = 0; i < 4; i++) {
-            int nx = x + D[i][0], ny = y + D[i][1];
-            if (nx >= 0 && ny >= 0 && nx <= mapX + 1 && ny <= mapY + 1 && 
-                !visited[nx][ny] && ok(Map[nx][ny])) {
-                visited[nx][ny] = true;
-                q.push({nx, ny});
-            }
-        }
+  if (!ok(Map[tx][ty])) return false;
+  bool visited[110][110] = {0};
+  queue<pair<int, int>> q;
+  q.push({sx, sy});
+  visited[sx][sy] = true;
+  while (!q.empty()) {
+    auto [x, y] = q.front();
+    q.pop();
+    if (x == tx && y == ty) return true;
+    for (int i = 0; i < 4; i++) {
+      int nx = x + D[i][0], ny = y + D[i][1];
+      if (nx >= 0 && ny >= 0 && nx <= mapX + 1 && ny <= mapY + 1 && 
+          !visited[nx][ny] && ok(Map[nx][ny])) {
+        visited[nx][ny] = true;
+        q.push({nx, ny});
+      }
     }
-    return false;
+  }
+  return false;
 }
 
 deque<pair<int, int>> bfsFindPath(int sx, int sy, int tx, int ty) {
-    deque<pair<int, int>> path;
-    if (!bfsCanReach(sx, sy, tx, ty)) return path;
-    bool visited[110][110] = {0};
-    pair<int, int> parent[110][110];
-    queue<pair<int, int>> q;
-    q.push({sx, sy});
-    visited[sx][sy] = true;
-    while (!q.empty()) {
-        auto [x, y] = q.front();
-        q.pop();
-        if (x == tx && y == ty) break;
-        for (int i = 0; i < 4; i++) {
-            int nx = x + D[i][0], ny = y + D[i][1];
-            if (nx >= 0 && ny >= 0 && nx <= mapX + 1 && ny <= mapY + 1 && 
-                !visited[nx][ny] && ok(Map[nx][ny])) {
-                visited[nx][ny] = true;
-                parent[nx][ny] = {x, y};
-                q.push({nx, ny});
-            }
-        }
+  deque<pair<int, int>> path;
+  if (!bfsCanReach(sx, sy, tx, ty)) return path;
+  bool visited[110][110] = {0};
+  pair<int, int> parent[110][110];
+  queue<pair<int, int>> q;
+  q.push({sx, sy});
+  visited[sx][sy] = true;
+  while (!q.empty()) {
+    auto [x, y] = q.front();
+    q.pop();
+    if (x == tx && y == ty) break;
+    for (int i = 0; i < 4; i++) {
+      int nx = x + D[i][0], ny = y + D[i][1];
+      if (nx >= 0 && ny >= 0 && nx <= mapX + 1 && ny <= mapY + 1 && 
+          !visited[nx][ny] && ok(Map[nx][ny])) {
+        visited[nx][ny] = true;
+        parent[nx][ny] = {x, y};
+        q.push({nx, ny});
+      }
     }
-    int cx = tx, cy = ty;
-    while (cx != sx || cy != sy) {
-        auto [px, py] = parent[cx][cy];
-        path.push_front({cx - px, cy - py});
-        cx = px;
-        cy = py;
-    }
-    return path;
+  }
+  int cx = tx, cy = ty;
+  while (cx != sx || cy != sy) {
+    auto [px, py] = parent[cx][cy];
+    path.push_front({cx - px, cy - py});
+    cx = px;
+    cy = py;
+  }
+  return path;
 }
 
 bool heartWaveActive = false;
@@ -232,17 +260,55 @@ void getQu(int t, int x, int y) {
 	dfsGetQu(t, mons[t]->x, mons[t]->y, x, y);
 }
 
+void updateCamera() {
+  camX = player.x - viewH / 2;
+  camY = player.y - viewW / 2;
+  if (camX < 0) camX = 0;
+  if (camY < 0) camY = 0;
+  if (camX > mapX + 1 - viewH) camX = mapX + 1 - viewH;
+  if (camY > mapY + 1 - viewW) camY = mapY + 1 - viewW;
+}
+
 void paint(int x, int y, int t, int offsetY = 0) {
-	putimage(y * tileW, x * tileH + offsetY, tileW, tileH, img[t], 0, 0, getwidth(img[t]), getheight(img[t]));
+	int drawX = x - camX;
+	int drawY = y - camY;
+	
+	if (drawX >= 0 && drawX <= viewH + 2 && drawY >= -1 && drawY <= viewW + 2) {
+		putimage(drawY * tileW, drawX * tileH + offsetY, tileW, tileH, img[t], 0, 0, getwidth(img[t]), getheight(img[t]));
+	}
 }
 
 void paintFull(int t) {
 	putimage(0, 0, getwidth(), getheight(), img[t], 0, 0, getwidth(img[t]), getheight(img[t]));
 }
 
+void drawHealthBar(const Node& m) {
+	if (m.hp <= 0 || m.maxhp <= 0) return;
+	int drawX = m.x - camX;
+	int drawY = m.y - camY;
+	if (drawX < 0 || drawX > viewH + 2 || drawY < 0 || drawY > viewW + 2) return;
+
+	int barW = (int)(tileW * 0.8);
+	int barH = max(4, (int)(tileH * 0.12));
+	int screenX = drawY * tileW + (tileW - barW) / 2;
+	int screenY = drawX * tileH - barH - 2;
+	if (screenY < 0) screenY = drawX * tileH + 2;
+
+	float pct = (float)m.hp / (float)m.maxhp;
+	if (pct < 0.0f) pct = 0.0f;
+	if (pct > 1.0f) pct = 1.0f;
+
+	setfillcolor(DARKRED);
+	ege_fillrect(screenX, screenY, barW, barH);
+	setfillcolor(GREEN);
+	ege_fillrect(screenX, screenY, (int)(barW * pct), barH);
+	setlinecolor(BLACK);
+	ege_rectangle(screenX, screenY, barW, barH);
+}
+
 void painthart() {
-	int row = mapX + 4;
-	int maxPerRow = mapY + 4;
+	int row = viewH + 2;
+	int maxPerRow = viewW + 1;
 	
 	auto now = chrono::system_clock::now();
 	if (heartWaveActive) {
@@ -259,7 +325,7 @@ void painthart() {
 			double phase = (elapsed.count() * 0.001 * HEART_WAVE_FREQUENCY) - (i * 0.3);
 			offsetY = (int)(sin(phase * 3.14159 * 2) * HEART_WAVE_AMPLITUDE);
 		}
-		paint(row, i, obc::heart, offsetY);
+    putimage(i * tileW, row * tileH + offsetY, tileW, tileH, img[obc::heart], 0, 0, getwidth(img[obc::heart]), getheight(img[obc::heart]));
 	}
 	for (int i = min(maxPerRow, player.hp); i < min(maxPerRow, maxhp); i++) {
 		int offsetY = 0;
@@ -268,13 +334,13 @@ void painthart() {
 			double phase = (elapsed.count() * 0.001 * HEART_WAVE_FREQUENCY) - (i * 0.3);
 			offsetY = (int)(sin(phase * 3.14159 * 2) * HEART_WAVE_AMPLITUDE);
 		}
-		paint(row, i, obc::vheart, offsetY);
+		putimage(i * tileW, row * tileH + offsetY, tileW, tileH, img[obc::vheart], 0, 0, getwidth(img[obc::vheart]), getheight(img[obc::vheart]));
 	}
 }
 
 void drawItemBar() {
-	int row = mapX + 5; // 血条 mapX+4 之后的第一行，无缝隙
-	int itemH = tileH * 1.2; // 物品栏稍高于普通方块
+	int row = viewH + 3;
+	int itemH = tileH * 1.2;
 	int itemW = itemH * 1.2;
 	int totalW = itemW * 10;
 	int startX = (getwidth() - totalW) / 2;
@@ -285,24 +351,44 @@ void drawItemBar() {
 			putimage(startX + i * itemW, startY, itemW, itemH, img[obc::wplat], 0, 0, getwidth(img[obc::wplat]), getheight(img[obc::wplat]));
 		else
 			putimage(startX + i * itemW, startY, itemW, itemH, img[obc::wupinlan], 0, 0, getwidth(img[obc::wupinlan]), getheight(img[obc::wupinlan]));
-		if (wupinlan[i])
-			putimage(startX + i * itemW + 6, startY + 5, tileW, tileH, img[wupin[wupinlan[i]].t], 0, 0, getwidth(img[wupin[wupinlan[i]].t]), getheight(img[wupin[wupinlan[i]].t]));
+		
+		if (wupinlan[i]) {
+      int iconSize = (int)(itemH * 0.7);
+      int paddingX = (itemW - iconSize) / 2;
+      int paddingY = (itemH - iconSize) / 2;
+			putimage(startX + i * itemW + paddingX, startY + paddingY, iconSize, iconSize, 
+               img[wupin[wupinlan[i]].t], 0, 0, getwidth(img[wupin[wupinlan[i]].t]), getheight(img[wupin[wupinlan[i]].t]));
+			if (wupinlanCnt[i] > 1) {
+				int fontH = max(10, (int)(itemH * 0.28));
+				setfont(fontH, 0, "Consolas");
+				setbkmode(TRANSPARENT);
+				settextcolor(WHITE);
+				string cnt = to_string(wupinlanCnt[i]);
+				int tx = startX + i * itemW + itemW - textwidth(cnt.c_str()) - 4;
+				int ty = startY + itemH - textheight(cnt.c_str()) - 2;
+				outtextxy(tx, ty, cnt.c_str());
+			}
+    }
 	}
 }
+
 void pinatmap() {
-	for (int i = 0; i <= mapX + 1; i++) {
-		paint(i + 1, 0, obc::bedrock);
-		for (int j = 0; j <= mapY + 1; j++) paint(i + 1, j + 1, abs(Map[i][j]));
-		paint(i + 1, mapY + 3, obc::bedrock);
-	}
-	for (int i = 0; i <= mapY + 3; i++) {
-		paint(0, i, obc::bedrock);
-		paint(mapX + 3, i, obc::bedrock); // 底部围墙
-	}
-	for (int i = 0; i <= mapX + 1; i++)
-		for (int j = 0; j <= mapY + 1; j++) {
-			if (!diaoluo[i][j].empty()) {
-				int x = i + 1, y = j + 1, t = wupindiaoluo[diaoluo[i][j].front()].t;
+  int startI = camX;
+  int endI = camX + viewH + 2; 
+  int startJ = camY;
+  int endJ = camY + viewW + 2;
+
+  for (int i = startI; i <= endI; i++) {
+    for (int j = startJ; j <= endJ; j++) {
+      if (i < 0 || i > mapX + 1 || j < 0 || j > mapY + 1) continue;
+      paint(i, j, abs(Map[i][j]));
+    }
+  }
+
+	for (int i = startI; i <= endI; i++)
+		for (int j = startJ; j <= endJ; j++) {
+			if (i >= 0 && i <= mapX && j >= 0 && j <= mapY && !diaoluo[i][j].empty()) {
+				int x = i, y = j, t = wupindiaoluo[diaoluo[i][j].front()].t;
 				dropItemAngle[i][j] += 0.08f;
 				if (dropItemAngle[i][j] > 6.28318f) dropItemAngle[i][j] -= 6.28318f;
 				
@@ -333,7 +419,11 @@ void pinatmap() {
 					}
 				}
 				int offsetX = (tileW * 0.7 - dstW) / 2;
-				putimage(y * tileW + 4 + offsetX, x * tileH + 5, rot);
+				
+        int drawX = x - camX;
+        int drawY = y - camY;
+        if(drawX >= 0 && drawX <= viewH + 2 && drawY >= 0 && drawY <= viewW + 2)
+				  putimage(drawY * tileW + 4 + offsetX, drawX * tileH + 5, rot);
 				delimage(rot);
 			}
 		}
@@ -350,7 +440,9 @@ void makemap(int x, int y) {
 	}
 	Map[x][y] = 1;
 	for (i = 0; i < 4; i++)
-		if (!ok(Map[x + 2 * c[i][0]][y + 2 * c[i][1]])) {
+		if (x + 2 * c[i][0] >= 1 && x + 2 * c[i][0] <= mapX && 
+		    y + 2 * c[i][1] >= 1 && y + 2 * c[i][1] <= mapY &&
+		    !ok(Map[x + 2 * c[i][0]][y + 2 * c[i][1]])) {
 			Map[x + c[i][0]][y + c[i][1]] = 1;
 			makemap(x + 2 * c[i][0], y + 2 * c[i][1]);
 		}
@@ -387,11 +479,14 @@ bool goit(int x, int y, Node& t) {
 					}
 				}
 			}
-			for (int i = 0; i < 10 && !diaoluo[t.x][t.y].empty(); i++)
-				if (wupinlan[i] == 0) {
-					wupinlan[i] = diaoluo[t.x][t.y].front();
+			while (!diaoluo[t.x][t.y].empty()) {
+				int itemId = diaoluo[t.x][t.y].front();
+				if (addToInventory(itemId)) {
 					diaoluo[t.x][t.y].pop();
+				} else {
+					break;
 				}
+			}
 		}
 		return 1;
 	}
@@ -399,17 +494,17 @@ bool goit(int x, int y, Node& t) {
 }
 
 void randomWalk(Node& m) {
-    vector<pair<int, int>> validMoves;
-    for (int i = 0; i < 4; i++) {
-        int nx = m.x + D[i][0], ny = m.y + D[i][1];
-        if (nx >= 0 && ny >= 0 && nx <= mapX + 1 && ny <= mapY + 1 && ok(Map[nx][ny])) {
-            validMoves.push_back({D[i][0], D[i][1]});
-        }
+  vector<pair<int, int>> validMoves;
+  for (int i = 0; i < 4; i++) {
+    int nx = m.x + D[i][0], ny = m.y + D[i][1];
+    if (nx >= 0 && ny >= 0 && nx <= mapX + 1 && ny <= mapY + 1 && ok(Map[nx][ny])) {
+      validMoves.push_back({D[i][0], D[i][1]});
     }
-    if (!validMoves.empty()) {
-        int idx = rand() % validMoves.size();
-        goit(validMoves[idx].first, validMoves[idx].second, m);
-    }
+  }
+  if (!validMoves.empty()) {
+    int idx = rand() % validMoves.size();
+    goit(validMoves[idx].first, validMoves[idx].second, m);
+  }
 }
 
 int Rand(vector<int> x) {
@@ -443,7 +538,9 @@ void initGame() {
 	mons.clear();
 	qu.clear();
 	wax = way = downok = leftok = 0;
-	player = {0, 0, obc::player, maxhp, 1, 0, 0, 1, 0};
+	player = {1, 1, obc::player, maxhp, 1, 0, 0, 1, 0}; 
+
+  // 先初始化全部为杂乱方块
 	for (int i = 0; i <= mapX + 1; i++)
 		for (int j = 0; j <= mapY + 1; j++) {
 			int p = Rand({40, 30, 15, 1, 4});
@@ -452,7 +549,21 @@ void initGame() {
 			while (!diaoluo[i][j].empty())   diaoluo[i][j].pop();
 			dropItemAngle[i][j] = 0;
 		}
-	makemap(2 * (rand() % (mapX / 2) + 1), 2 * (rand() % (mapY / 2) + 1));
+
+  // 设置基岩边界，防止makemap越界，同时作为物理墙壁
+  for(int i=0; i<=mapX+1; i++) { Map[i][0] = obc::bedrock; Map[i][mapY+1] = obc::bedrock; }
+  for(int j=0; j<=mapY+1; j++) { Map[0][j] = obc::bedrock; Map[mapX+1][j] = obc::bedrock; }
+
+  // 修复1：强制从(1,1)开始生成迷宫，确保玩家出生点为空且连通
+	makemap(1, 1);
+  Map[1][1] = 1; // 双重保险，确保出生点是路
+
+  // 修复2：传送门放在墙内 (mapX, mapY)
+  Map[mapX][mapY] = 1; // 终点必须是路
+  // 确保终点连通，防止迷宫算法因奇偶性问题产生死角
+  Map[mapX-1][mapY] = 1; 
+  Map[mapX][mapY-1] = 1;
+
 	for (int i = 0; i < guaiShu; i++) {
 		int type = Rand({20, 50, 30, 30});
 		pair<int, int> xy = getxy();
@@ -486,14 +597,18 @@ void do_menu() {
 				ofstream Cout("C:\\cundang\\1.txt");
 				Cout << 6 << endl;
 				Cout << 111 << ' ' << 112 << ' ' << 121 << ' ' << 200 + obc::dia << ' ';
-				for (int i = 1; i <= 6; i++)
-					Cout << 0 << ' ';
+				for (int i = 1; i <= 6; i++) Cout << 0 << ' ';
+				Cout << endl;
+				Cout << 1 << ' ' << 1 << ' ' << 1 << ' ' << 1 << ' ';
+				for (int i = 1; i <= 6; i++) Cout << 0 << ' ';
 				Cout << endl;
 				Cout.close();
 				ifstream Cin("C:\\cundang\\1.txt");
 				Cin >> maxhp;
-				for (int i = 0; i <= 9; i++)
-					Cin >> wupinlan[i];
+				for (int i = 0; i <= 9; i++) Cin >> wupinlan[i];
+				for (int i = 0; i <= 9; i++) {
+					if (!(Cin >> wupinlanCnt[i])) wupinlanCnt[i] = wupinlan[i] ? 1 : 0;
+				}
 				Cin.close();
 				return;
 			}
@@ -501,15 +616,36 @@ void do_menu() {
 }
 
 void do_game() {
+  updateCamera();
 	for (auto& i : mons) if (i->hp > 0) i->useSkill();
 
 	if (GetAsyncKeyState(0x57) & 0x0001) goit(-1, 0, player);
 	if (GetAsyncKeyState(0x53) & 0x0001) goit(1, 0, player);
 	if (GetAsyncKeyState(0x41) & 0x0001) goit(0, -1, player);
 	if (GetAsyncKeyState(0x44) & 0x0001) goit(0, 1, player);
+	if (GetAsyncKeyState('X') & 0x0001) {
+		int bestIdx = -1;
+		int bestDist = INF;
+		int rangeSq = player.k * player.k;
+		for (int i = 0; i < (int)mons.size(); i++) {
+			if (mons[i]->hp <= 0) continue;
+			int d = getDistSq(player.x, player.y, mons[i]->x, mons[i]->y);
+			if (d <= rangeSq && d < bestDist) {
+				bestDist = d;
+				bestIdx = i;
+			}
+		}
+		if (bestIdx != -1) {
+			mons[bestIdx]->hp -= player.hurt + wupin[wupinlan[At]].hurt;
+		}
+	}
 	if ((GetAsyncKeyState('Q') & 0x0001) && wupinlan[At]) {
 		diaoluo[player.x][player.y].push(wupinlan[At]);
-		wupinlan[At] = 0;
+		wupinlanCnt[At]--;
+		if (wupinlanCnt[At] <= 0) {
+			wupinlan[At] = 0;
+			wupinlanCnt[At] = 0;
+		}
 	}
 	int nextat = 255;
 	for (char x = '1'; x <= '9'; x++)
@@ -523,8 +659,8 @@ void do_game() {
 	while (mousemsg()) {
 		x = getmouse();
 		if (x.is_left()) {
-			gridY = x.x / tileW - 1;
-			gridX = x.y / tileH - 1;
+			gridY = x.x / tileW + camY;
+			gridX = x.y / tileH + camX;
 			if (x.is_down()) {
 				downok = 1;
 				leftok = 0;
@@ -536,7 +672,7 @@ void do_game() {
 				watime = chrono::system_clock::now();
 			}
 			if (downok && !leftok) {
-				if (Map[gridX][gridY] == 1)
+				if (gridX >= 0 && gridX <= mapX + 1 && gridY >= 0 && gridY <= mapY + 1 && Map[gridX][gridY] == 1)
 					for (auto& m : mons)
 						if (m->hp > 0 && gridX == m->x && gridY == m->y)
 							if (getDistSq(player.x, player.y, m->x, m->y) <= player.k * player.k)
@@ -548,10 +684,17 @@ void do_game() {
 			}
 		} else if (x.is_right()) {
 			if (x.is_down()) {
-				if (wupinlan[At] / 100 == 2 && getDistSq(x.y / tileH - 1, x.x / tileW - 1, player.x, player.y) <= player.k * player.k
-				    && Map[x.y / tileH - 1][x.x / tileW - 1] == 1) {
-					Map[x.y / tileH - 1][x.x / tileW - 1] = wupinlan[At] % 200;
-					wupinlan[At] = 0;
+        int tx = x.y / tileH + camX;
+        int ty = x.x / tileW + camY;
+				if (tx >= 0 && tx <= mapX + 1 && ty >= 0 && ty <= mapY + 1 &&
+            wupinlan[At] / 100 == 2 && getDistSq(tx, ty, player.x, player.y) <= player.k * player.k
+				    && Map[tx][ty] == 1) {
+					Map[tx][ty] = wupinlan[At] % 200;
+					wupinlanCnt[At]--;
+					if (wupinlanCnt[At] <= 0) {
+						wupinlan[At] = 0;
+						wupinlanCnt[At] = 0;
+					}
 				}
 			}
 		}
@@ -562,7 +705,7 @@ void do_game() {
 			wax = gridX;
 			way = gridY;
 			watime = chrono::system_clock::now();
-		} else if (P.count() >= Map2[wax][way].first * 1000) {
+		} else if (wax >= 0 && wax <= mapX && way >= 0 && way <= mapY && P.count() >= Map2[wax][way].first * 1000) {
 			watime = chrono::system_clock::now();
 			if (Map[wax][way] > 1 && player.wa + wupin[wupinlan[At]].wa >= Map2[wax][way].second
 			    && getDistSq(wax, way, player.x, player.y) <= player.k * player.k) {
@@ -608,11 +751,15 @@ void do_game() {
 
 	paintFull(1);
 	pinatmap();
-	for (auto& m : mons) if (m->hp > 0) paint(m->x + 1, m->y + 1, m->t);
-	paint(player.x + 1, player.y + 1, player.t);
-	paint(mapX + 2, mapY + 2, obc::port);
+	for (auto& m : mons) if (m->hp > 0) paint(m->x, m->y, m->t);
+	for (auto& m : mons) if (m->hp > 0) drawHealthBar(*m);
+	paint(player.x, player.y, player.t);
+	
+  // 渲染传送门，只有当它在视野内时
+  paint(mapX, mapY, obc::port); 
 
-	if (player.x == mapX + 1 && player.y == mapY + 1) {
+  // 判定胜利：玩家到达右下角终点 (mapX, mapY)
+	if (player.x == mapX && player.y == mapY) {
 		maxhp += guaiShu;
 		resultImgTag = obc::win;
 		STATE = 2;
@@ -645,36 +792,40 @@ int main() {
 		ofstream Cout("C:\\cundang\\1.txt");
 		Cout << 6 << endl;
 		Cout << 111 << ' ' << 112 << ' ' << 121 << ' ';
-		for (int i = 1; i <= 8; i++)
-			Cout << 0 << ' ';
+		for (int i = 1; i <= 8; i++) Cout << 0 << ' ';
+		Cout << endl;
+		Cout << 1 << ' ' << 1 << ' ' << 1 << ' ';
+		for (int i = 1; i <= 8; i++) Cout << 0 << ' ';
 		Cout << endl;
 		Cout.close();
 	}
 	ifstream Cin("C:\\cundang\\1.txt");
 	Cin >> maxhp;
-	for (int i = 0; i <= 9; i++)
-		Cin >> wupinlan[i];
+	for (int i = 0; i <= 9; i++) Cin >> wupinlan[i];
+	for (int i = 0; i <= 9; i++) {
+		if (!(Cin >> wupinlanCnt[i])) wupinlanCnt[i] = wupinlan[i] ? 1 : 0;
+	}
 	Cin.close();
-	// 总逻辑行数：mapX + 4(地图围墙) + 1(血条) + 1(物品栏) + 1(底部缓冲) = mapX + 7
-	tileW = realW / (mapY + 4);
-	tileH = realH / (mapX + 7);
+	
+	tileW = realW / (viewW + 4);
+	tileH = realH / (viewH + 7);
 
 	wupin[111] = nodeWP(obc::mjb, 10, 1, 0);
 	wupindiaoluo[111] = nodeWP(obc::mj, 10, 1, 0);
-	//木剑
+	
 	wupin[112] = nodeWP(obc::sjb, 20, 2, 0);
 	wupindiaoluo[112] = nodeWP(obc::sj, 20, 2, 0);
-	//石剑
+	
 	wupin[121] = nodeWP(obc::mgb, 10, 0, 1);
 	wupindiaoluo[121] = nodeWP(obc::mg, 10, 0, 1);	
-	//木稿 
+	
 	for (auto i : Not) {
 		wupin[200 + i] = nodeWP((unsigned char)i, 0, 0, 0);
 		wupindiaoluo[200 + i] = nodeWP((unsigned char)i, 0, 0, 0);
 	}
 	wupindiaoluo[200 + obc::dia] = nodeWP((unsigned char)obc::dia3, 0, 0, 0);
 	wupin[200 + obc::dia] = nodeWP((unsigned char)obc::dia2, 0, 0, 0);
-	//方块
+	
 	string lujing[100] {
 		"beijing.jpg", "caofangkuai.jpg",  "nitu.jpg", "chuansongmenfangkuai.jpg",
 		"wanjia.jpg", "shenglitupian.jpg", "yuanshi.jpg", "zuanshikuang.jpg",
@@ -704,6 +855,9 @@ int main() {
 	Cout << maxhp << endl;
 	for (int i = 0; i < 10; i++)
 		Cout << wupinlan[i] << ' ';
+	Cout << endl;
+	for (int i = 0; i < 10; i++)
+		Cout << wupinlanCnt[i] << ' ';
 	Cout.close();
 	for (int i = 1; i <= 33; i++) delimage(img[i]);
 	closegraph();
