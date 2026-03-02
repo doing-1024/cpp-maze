@@ -229,11 +229,184 @@ deque<pair<int, int>> bfsFindPath(int sx, int sy, int tx, int ty) {
   return path;
 }
 
+int navDist[110][110];
+bool navDirty = true;
+
+void rebuildNavDist() {
+	for (int i = 0; i <= mapX + 1; i++)
+		for (int j = 0; j <= mapY + 1; j++)
+			navDist[i][j] = INF;
+	if (player.x < 0 || player.y < 0 || player.x > mapX + 1 || player.y > mapY + 1) return;
+	if (!ok(Map[player.x][player.y])) return;
+
+	queue<pair<int, int>> q;
+	navDist[player.x][player.y] = 0;
+	q.push({player.x, player.y});
+	while (!q.empty()) {
+		auto [x, y] = q.front();
+		q.pop();
+		for (int i = 0; i < 4; i++) {
+			int nx = x + D[i][0], ny = y + D[i][1];
+			if (nx < 0 || ny < 0 || nx > mapX + 1 || ny > mapY + 1) continue;
+			if (!ok(Map[nx][ny])) continue;
+			if (navDist[nx][ny] != INF) continue;
+			navDist[nx][ny] = navDist[x][y] + 1;
+			q.push({nx, ny});
+		}
+	}
+}
+
 bool heartWaveActive = false;
 timePoint lastHurtTime;
 const int HEART_WAVE_DURATION = 800;
 const double HEART_WAVE_AMPLITUDE = 3.0;
 const double HEART_WAVE_FREQUENCY = 2.0;
+
+struct MiniMapLayout {
+	int bgX = 0, bgY = 0, bgW = 0, bgH = 0;
+	int mapX = 0, mapY = 0, mapW = 0, mapH = 0;
+	int rows = 0, cols = 0;
+	int cell = 0;
+};
+bool minimapEnabled = true;
+MiniMapLayout minimapLayout;
+PIMAGE minimapTerrainCache = NULL;
+int minimapTerrainCacheW = 0;
+int minimapTerrainCacheH = 0;
+bool minimapTerrainCacheDirty = true;
+
+color_t minimapTileColor(int t);
+
+MiniMapLayout calcMiniMapLayout() {
+	MiniMapLayout l;
+	if (!minimapEnabled) return l;
+	l.rows = mapX + 2;
+	l.cols = mapY + 2;
+	int maxDim = l.rows > l.cols ? l.rows : l.cols;
+
+	int target = getwidth() / 4;
+	int t2 = getheight() / 4;
+	if (t2 < target) target = t2;
+	if (target > 320) target = 320;
+
+	l.cell = target / maxDim;
+	if (l.cell < 2) l.cell = 2;
+	if (l.cell > 10) l.cell = 10;
+
+	l.mapW = l.cols * l.cell;
+	l.mapH = l.rows * l.cell;
+
+	int pad = l.cell;
+	if (pad < 4) pad = 4;
+	const int headerH = 18;
+	const int margin = 10;
+
+	l.bgW = l.mapW + pad * 2;
+	l.bgH = l.mapH + headerH + pad * 2;
+	l.bgX = getwidth() - l.bgW - margin;
+	l.bgY = margin;
+	if (l.bgX < margin) l.bgX = margin;
+	if (l.bgY < margin) l.bgY = margin;
+
+	l.mapX = l.bgX + pad;
+	l.mapY = l.bgY + pad + headerH;
+	return l;
+}
+
+void ensureMiniMapTerrainCache() {
+	if (!minimapEnabled) return;
+	if (minimapLayout.cell <= 0 || minimapLayout.mapW <= 0 || minimapLayout.mapH <= 0) return;
+	if (!minimapTerrainCache || minimapTerrainCacheW != minimapLayout.mapW || minimapTerrainCacheH != minimapLayout.mapH) {
+		if (minimapTerrainCache) delimage(minimapTerrainCache);
+		minimapTerrainCache = newimage(minimapLayout.mapW, minimapLayout.mapH);
+		minimapTerrainCacheW = minimapLayout.mapW;
+		minimapTerrainCacheH = minimapLayout.mapH;
+		minimapTerrainCacheDirty = true;
+	}
+	if (!minimapTerrainCacheDirty) return;
+
+	PIMAGE old = gettarget();
+	settarget(minimapTerrainCache);
+	cleardevice();
+	for (int i = 0; i < minimapLayout.rows; i++) {
+		for (int j = 0; j < minimapLayout.cols; j++) {
+			int t = abs(Map[i][j]);
+			setfillcolor(minimapTileColor(t));
+			ege_fillrect(j * minimapLayout.cell, i * minimapLayout.cell, minimapLayout.cell, minimapLayout.cell);
+		}
+	}
+	settarget(old);
+	minimapTerrainCacheDirty = false;
+}
+
+bool pointInMiniMap(int px, int py) {
+	if (!minimapEnabled) return false;
+	if (minimapLayout.bgW <= 0 || minimapLayout.bgH <= 0) return false;
+	return px >= minimapLayout.bgX && px < minimapLayout.bgX + minimapLayout.bgW &&
+	       py >= minimapLayout.bgY && py < minimapLayout.bgY + minimapLayout.bgH;
+}
+
+color_t minimapTileColor(int t) {
+	switch (t) {
+		case obc::bedrock: return EGEGRAY(20);
+		case obc::grass: return EGERGB(60, 160, 60);
+		case obc::soil: return EGERGB(140, 90, 40);
+		case obc::stone: return EGEGRAY(110);
+		case obc::dia: return EGERGB(60, 220, 220);
+		case obc::iron: return EGERGB(200, 140, 70);
+		default:
+			return ok(t) ? EGEGRAY(210) : EGEGRAY(70);
+	}
+}
+
+void drawMiniMapMarker(int x, int y, color_t col) {
+	if (!minimapEnabled || minimapLayout.cell <= 0) return;
+	if (x < 0 || y < 0 || x >= minimapLayout.rows || y >= minimapLayout.cols) return;
+	int px = minimapLayout.mapX + y * minimapLayout.cell;
+	int py = minimapLayout.mapY + x * minimapLayout.cell;
+	setfillcolor(col);
+	ege_fillrect(px, py, minimapLayout.cell, minimapLayout.cell);
+}
+
+void drawMiniMap() {
+	if (!minimapEnabled) return;
+	if (minimapLayout.cell <= 0) return;
+	ensureMiniMapTerrainCache();
+
+	setfillcolor(EGERGBA(0, 0, 0, 180));
+	ege_fillrect(minimapLayout.bgX, minimapLayout.bgY, minimapLayout.bgW, minimapLayout.bgH);
+	setlinecolor(EGEGRAY(230));
+	ege_rectangle(minimapLayout.bgX, minimapLayout.bgY, minimapLayout.bgW, minimapLayout.bgH);
+
+	setbkmode(TRANSPARENT);
+	settextcolor(WHITE);
+	setfont(16, 0, "Consolas");
+	outtextxy(minimapLayout.bgX + 6, minimapLayout.bgY + 2, "MiniMap (M)");
+
+	if (minimapTerrainCache) putimage(minimapLayout.mapX, minimapLayout.mapY, minimapTerrainCache);
+
+	// 视野范围框
+	int viewRows = viewH + 3;
+	int viewCols = viewW + 3;
+	int vx = camY, vy = camX;
+	if (vx < 0) vx = 0;
+	if (vy < 0) vy = 0;
+	if (vx > minimapLayout.cols) vx = minimapLayout.cols;
+	if (vy > minimapLayout.rows) vy = minimapLayout.rows;
+	if (vx + viewCols > minimapLayout.cols) viewCols = minimapLayout.cols - vx;
+	if (vy + viewRows > minimapLayout.rows) viewRows = minimapLayout.rows - vy;
+	if (viewCols > 0 && viewRows > 0) {
+		setlinecolor(EGERGB(255, 220, 40));
+		ege_rectangle(minimapLayout.mapX + vx * minimapLayout.cell,
+		              minimapLayout.mapY + vy * minimapLayout.cell,
+		              viewCols * minimapLayout.cell, viewRows * minimapLayout.cell);
+	}
+
+	// 出口/怪物/玩家
+	drawMiniMapMarker(mapX, mapY, EGERGB(200, 60, 255)); // exit
+	for (auto& m : mons) if (m->hp > 0) drawMiniMapMarker(m->x, m->y, EGERGB(255, 70, 70));
+	drawMiniMapMarker(player.x, player.y, EGERGB(60, 150, 255));
+}
 
 bool quok;
 void dfsGetQu(int t, int x1, int y1, int x, int y) {
@@ -385,6 +558,8 @@ void pinatmap() {
     }
   }
 
+	const int dropBaseW = (int)(tileW * 0.7f);
+	const int dropBaseH = (int)(tileH * 0.7f);
 	for (int i = startI; i <= endI; i++)
 		for (int j = startJ; j <= endJ; j++) {
 			if (i >= 0 && i <= mapX && j >= 0 && j <= mapY && !diaoluo[i][j].empty()) {
@@ -394,37 +569,16 @@ void pinatmap() {
 				
 				float angle = dropItemAngle[i][j];
 				float scale = fabsf(cosf(angle));
-				int srcW = getwidth(img[t]);
-				int srcH = getheight(img[t]);
-				int dstW = (int)(tileW * 0.7f * scale);
-				int dstH = tileH * 0.7;
-				
+				int dstW = (int)(dropBaseW * scale);
 				if (dstW < 1) dstW = 1;
-				
-				PIMAGE rot = newimage(dstW, dstH);
-				setfillcolor(BLACK);
-				cleardevice(rot);
-				
-				float scaleX = (float)srcW / dstW;
-				float scaleY = (float)srcH / dstH;
-				
-				for (int dy = 0; dy < dstH; dy++) {
-					for (int dx = 0; dx < dstW; dx++) {
-						int sx = (int)(dx * scaleX);
-						int sy = (int)(dy * scaleY);
-						if (sx >= 0 && sx < srcW && sy >= 0 && sy < srcH) {
-							color_t col = getpixel(sx, sy, img[t]);
-							putpixel(dx, dy, col, rot);
-						}
-					}
-				}
-				int offsetX = (tileW * 0.7 - dstW) / 2;
+				int offsetX = (dropBaseW - dstW) / 2;
 				
         int drawX = x - camX;
         int drawY = y - camY;
-        if(drawX >= 0 && drawX <= viewH + 2 && drawY >= 0 && drawY <= viewW + 2)
-				  putimage(drawY * tileW + 4 + offsetX, drawX * tileH + 5, rot);
-				delimage(rot);
+        if(drawX >= 0 && drawX <= viewH + 2 && drawY >= 0 && drawY <= viewW + 2) {
+					putimage(drawY * tileW + 4 + offsetX, drawX * tileH + 5,
+					         dstW, dropBaseH, img[t], 0, 0, getwidth(img[t]), getheight(img[t]));
+				}
 			}
 		}
 	painthart();
@@ -578,6 +732,8 @@ void initGame() {
 	lastTime.assign(guaiShu, chrono::system_clock::now());
 	lasthurt.assign(guaiShu, chrono::system_clock::now());
 	watime = lasthp = lastHurtTime = chrono::system_clock::now();
+	navDirty = true;
+	minimapTerrainCacheDirty = true;
 }
 
 void do_menu() {
@@ -617,12 +773,14 @@ void do_menu() {
 
 void do_game() {
   updateCamera();
+	if (GetAsyncKeyState('M') & 0x0001) minimapEnabled = !minimapEnabled;
+	minimapLayout = calcMiniMapLayout();
 	for (auto& i : mons) if (i->hp > 0) i->useSkill();
 
-	if (GetAsyncKeyState(0x57) & 0x0001) goit(-1, 0, player);
-	if (GetAsyncKeyState(0x53) & 0x0001) goit(1, 0, player);
-	if (GetAsyncKeyState(0x41) & 0x0001) goit(0, -1, player);
-	if (GetAsyncKeyState(0x44) & 0x0001) goit(0, 1, player);
+	if (GetAsyncKeyState(0x57) & 0x0001) if (goit(-1, 0, player)) navDirty = true;
+	if (GetAsyncKeyState(0x53) & 0x0001) if (goit(1, 0, player)) navDirty = true;
+	if (GetAsyncKeyState(0x41) & 0x0001) if (goit(0, -1, player)) navDirty = true;
+	if (GetAsyncKeyState(0x44) & 0x0001) if (goit(0, 1, player)) navDirty = true;
 	if (GetAsyncKeyState('X') & 0x0001) {
 		int bestIdx = -1;
 		int bestDist = INF;
@@ -658,6 +816,7 @@ void do_game() {
 	mouse_msg x;
 	while (mousemsg()) {
 		x = getmouse();
+		if (pointInMiniMap(x.x, x.y)) continue;
 		if (x.is_left()) {
 			gridY = x.x / tileW + camY;
 			gridX = x.y / tileH + camX;
@@ -690,6 +849,8 @@ void do_game() {
             wupinlan[At] / 100 == 2 && getDistSq(tx, ty, player.x, player.y) <= player.k * player.k
 				    && Map[tx][ty] == 1) {
 					Map[tx][ty] = wupinlan[At] % 200;
+					navDirty = true;
+					minimapTerrainCacheDirty = true;
 					wupinlanCnt[At]--;
 					if (wupinlanCnt[At] <= 0) {
 						wupinlan[At] = 0;
@@ -711,9 +872,16 @@ void do_game() {
 			    && getDistSq(wax, way, player.x, player.y) <= player.k * player.k) {
 				diaoluo[wax][way].push(200 + Map[wax][way]);
 				Map[wax][way] = 1;
+				navDirty = true;
+				minimapTerrainCacheDirty = true;
 				leftok = 1;
 			}
 		}
+	}
+
+	if (navDirty) {
+		rebuildNavDist();
+		navDirty = false;
 	}
 
 	auto now = chrono::system_clock::now();
@@ -722,17 +890,28 @@ void do_game() {
 		auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - lastTime[i]);
 		if (elapsed.count() >= mons[i]->p) {
 			lastTime[i] = now;
-			if (bfsCanReach(mons[i]->x, mons[i]->y, player.x, player.y)) {
-				qu[i] = bfsFindPath(mons[i]->x, mons[i]->y, player.x, player.y);
-				if (!qu[i].empty()) {
-					pair<int, int> a = qu[i].front();
-					if (goit(a.first, a.second, *mons[i])) {
-						qu[i].pop_front();
+			int mx = mons[i]->x, my = mons[i]->y;
+			int cur = navDist[mx][my];
+			if (cur == 0) {
+				// already on player
+				} else if (cur == INF) {
+					randomWalk(*mons[i]);
+				} else {
+					pair<int, int> moves[4];
+					int movesCnt = 0;
+					for (int d = 0; d < 4; d++) {
+						int nx = mx + D[d][0], ny = my + D[d][1];
+						if (nx < 0 || ny < 0 || nx > mapX + 1 || ny > mapY + 1) continue;
+						if (!ok(Map[nx][ny])) continue;
+						if (navDist[nx][ny] == cur - 1) moves[movesCnt++] = {D[d][0], D[d][1]};
+					}
+					if (movesCnt > 0) {
+						auto mv = moves[rand() % movesCnt];
+						goit(mv.first, mv.second, *mons[i]);
+					} else {
+						randomWalk(*mons[i]);
 					}
 				}
-			} else {
-				randomWalk(*mons[i]);
-			}
 		}
 		auto Elapsed = chrono::duration_cast<chrono::milliseconds>(now - lasthurt[i]);
 		if (Elapsed.count() >= mons[i]->q && getDistSq(player.x, player.y, mons[i]->x, mons[i]->y) <= mons[i]->k * mons[i]->k) {
@@ -757,6 +936,7 @@ void do_game() {
 	
   // 渲染传送门，只有当它在视野内时
   paint(mapX, mapY, obc::port); 
+	drawMiniMap();
 
   // 判定胜利：玩家到达右下角终点 (mapX, mapY)
 	if (player.x == mapX && player.y == mapY) {
@@ -844,7 +1024,6 @@ int main() {
 	}
 	while (is_run()) {
 		if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) break;
-		cleardevice();
 		if (STATE == 0) do_menu();
 		else if (STATE == 1) do_game();
 		else if (STATE == 2) do_result();
@@ -860,6 +1039,7 @@ int main() {
 		Cout << wupinlanCnt[i] << ' ';
 	Cout.close();
 	for (int i = 1; i <= 33; i++) delimage(img[i]);
+	if (minimapTerrainCache) delimage(minimapTerrainCache);
 	closegraph();
 	cout << "资源释放完毕";
 	return 0;
