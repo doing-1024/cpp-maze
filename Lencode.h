@@ -1,5 +1,7 @@
 #pragma once
+
 #define Tag ObTag
+#define msInt unsigned int//DOWN(liuruizhou)可以加入毫秒级间隔
 #include<stdint.h>
 //coder name:liuruizhou£¬AI£ºdoubao 
 /*

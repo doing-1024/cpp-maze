@@ -337,11 +337,43 @@ queue<int> diaoluo[110][110];
 int getDistSq(int x1, int y1, int x2, int y2) {
 	return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
 }
+inline timePoint nowTick(){//DONE(liuruizhou)当前是什么时刻
+	return chrono::system_clock::now();
+}
+msInt elapsed(const timePoint& beg){
+	return chrono::duration_cast<chrono::milliseconds>(nowTick()-beg).count();
+}
+class TImeLine{ //DONE(liuruizhou)时间段，方便我们计算过去了多久
+private:
+	timePoint _begin;
+	timePoint _end;
+	msInt _dt;
+public:
+	const msInt&dt=_dt;
+	const timePoint&end=_end;
+	const timePoint&begin=_begin;
+	void init(const msInt Duration){//初始化
+		_dt=Duration;
+		_begin=nowTick();
+		_end=_begin + chrono::milliseconds(Duration);
+	}
+	msInt elapsed(){//开始时间距离当前时间的间隔
+		return chrono::duration_cast<chrono::milliseconds>(nowTick()-begin).count();
+	}
+	bool IsReach(){//是否到达时间
+		return nowTick()>=end;
+	}
+};
 
 class Skill {
 public:
 	virtual ~Skill() = default;
 	virtual void use() {}
+};
+class BaseBuff {
+public:
+	
+	
 };
 
 class Node {
@@ -432,6 +464,7 @@ void comzom::Skill1::use() {
 		if (tmp.count() >= v) state = 0;
 	}
 }
+
 
 class nodeWP {
 public:
@@ -661,15 +694,15 @@ bool pointInMiniMap(int px, int py) {
 
 color_t minimapTileColor(int t) {
 	switch (t) {
-		case obc::bedrock: return EGEGRAY(20);
-		case obc::grass: return EGERGB(60, 160, 60);
-		case obc::soil: return EGERGB(140, 90, 40);
-		case obc::yuanmu: return EGERGB(130, 90, 50);
-		case obc::stone: return EGEGRAY(110);
-		case obc::dia: return EGERGB(60, 220, 220);
-		case obc::iron: return EGERGB(200, 140, 70);
-		default:
-			return ok(t) ? EGEGRAY(210) : EGEGRAY(70);
+	case obc::bedrock: return EGEGRAY(20);
+	case obc::grass: return EGERGB(60, 160, 60);
+	case obc::soil: return EGERGB(140, 90, 40);
+	case obc::yuanmu: return EGERGB(130, 90, 50);
+	case obc::stone: return EGEGRAY(110);
+	case obc::dia: return EGERGB(60, 220, 220);
+	case obc::iron: return EGERGB(200, 140, 70);
+	default:
+		return ok(t) ? EGEGRAY(210) : EGEGRAY(70);
 	}
 }
 
@@ -1010,16 +1043,16 @@ void drawCraftingUI() {
 	}
 
 	// 拖拽中物品
-		if (drag.active && drag.stack.id != 0 && drag.stack.cnt > 0) {
-			int iconSize = (int)(l.slot * 0.78);
-			int px = lastMouseX - iconSize / 2;
-			int py = lastMouseY - iconSize / 2;
-			Tag tt = wupin[drag.stack.id].t;
-			drawImageTag(px, py, iconSize, iconSize, tt, true);
-			if (drag.stack.cnt > 1) {
-				int fontH = max(10, (int)(iconSize * 0.28));
-				setfont(fontH, 0, "Consolas");
-				setbkmode(TRANSPARENT);
+	if (drag.active && drag.stack.id != 0 && drag.stack.cnt > 0) {
+		int iconSize = (int)(l.slot * 0.78);
+		int px = lastMouseX - iconSize / 2;
+		int py = lastMouseY - iconSize / 2;
+		Tag tt = wupin[drag.stack.id].t;
+		drawImageTag(px, py, iconSize, iconSize, tt, true);
+		if (drag.stack.cnt > 1) {
+			int fontH = max(10, (int)(iconSize * 0.28));
+			setfont(fontH, 0, "Consolas");
+			setbkmode(TRANSPARENT);
 			settextcolor(WHITE);
 			string s = to_string(drag.stack.cnt);
 			outtextxy(px + iconSize - textwidth(s.c_str()) - 2, py + iconSize - textheight(s.c_str()) - 2, s.c_str());
@@ -1229,7 +1262,7 @@ void do_menu() {
 	drawImageTagAt(550, 185, obc::cz);
 	while (mousemsg()) {
 		mouse_msg msg = getmouse();
-		if (msg.msg == mouse_msg_down && msg.is_left())
+		if (msg.msg == mouse_msg_down && msg.is_left()){
 			if (msg.x >= 100 && msg.y >= 185 && msg.x <= 418 && msg.y <= 347) {
 				if (guaiok)
 					guaiShu = Rand({0, 30, 30, 40, 10, 10});
@@ -1254,8 +1287,10 @@ void do_menu() {
 				}
 				Cin.close();
 				return;
-			}
+			}   
+		}
 	}
+		
 }
 
 void do_game() {
@@ -1268,28 +1303,28 @@ void do_game() {
 			leftok = 0;
 			drag = DragState();
 			craftDirty = true;
-			} else {
-				// 关闭时把拖拽中物品放回去
-				if (drag.active) {
-					if (drag.src == DragSrc::Hotbar && drag.hotbarIdx >= 0 && drag.hotbarIdx < 10) {
-						if (drag.splitOne) {
-							ItemStack cur = getHotbarStack(drag.hotbarIdx);
-							if (cur.id == 0) setHotbarStack(drag.hotbarIdx, drag.stack);
-							else setHotbarStack(drag.hotbarIdx, {cur.id, cur.cnt + drag.stack.cnt});
-						} else {
-							setHotbarStack(drag.hotbarIdx, drag.stack);
-						}
-					} else if (drag.src == DragSrc::Craft && drag.craftR >= 0 && drag.craftR < 3 && drag.craftC >= 0 && drag.craftC < 3) {
-						if (drag.splitOne) {
-							ItemStack cur = getCraftStack(drag.craftR, drag.craftC);
-							if (cur.id == 0) setCraftStack(drag.craftR, drag.craftC, drag.stack);
-							else setCraftStack(drag.craftR, drag.craftC, {cur.id, cur.cnt + drag.stack.cnt});
-						} else {
-							setCraftStack(drag.craftR, drag.craftC, drag.stack);
-						}
+		} else {
+			// 关闭时把拖拽中物品放回去
+			if (drag.active) {
+				if (drag.src == DragSrc::Hotbar && drag.hotbarIdx >= 0 && drag.hotbarIdx < 10) {
+					if (drag.splitOne) {
+						ItemStack cur = getHotbarStack(drag.hotbarIdx);
+						if (cur.id == 0) setHotbarStack(drag.hotbarIdx, drag.stack);
+						else setHotbarStack(drag.hotbarIdx, {cur.id, cur.cnt + drag.stack.cnt});
+					} else {
+						setHotbarStack(drag.hotbarIdx, drag.stack);
 					}
-					drag = DragState();
+				} else if (drag.src == DragSrc::Craft && drag.craftR >= 0 && drag.craftR < 3 && drag.craftC >= 0 && drag.craftC < 3) {
+					if (drag.splitOne) {
+						ItemStack cur = getCraftStack(drag.craftR, drag.craftC);
+						if (cur.id == 0) setCraftStack(drag.craftR, drag.craftC, drag.stack);
+						else setCraftStack(drag.craftR, drag.craftC, {cur.id, cur.cnt + drag.stack.cnt});
+					} else {
+						setCraftStack(drag.craftR, drag.craftC, drag.stack);
+					}
 				}
+				drag = DragState();
+			}
 			returnCraftingGridToInventoryOrDrop();
 			craftPreviewRecipe = nullptr;
 			craftPreviewOutId = 0;
@@ -1309,48 +1344,48 @@ void do_game() {
 			lastMouseX = x.x;
 			lastMouseY = x.y;
 			if (pointInMiniMap(x.x, x.y)) continue;
-				if (!x.is_left()) continue;
+			if (!x.is_left()) continue;
 
-				if (x.is_down() && !drag.active) {
-					bool takeOne = x.is_doubleclick();
-					UISlotRef hit = hitTestCraftingUI(x.x, x.y, layout);
-					if (hit.kind == UISlotKind::Hotbar) {
-						ItemStack s = getHotbarStack(hit.idx);
-						if (s.id != 0 && s.cnt > 0) {
-							drag.active = true;
-							drag.src = DragSrc::Hotbar;
-							drag.hotbarIdx = hit.idx;
-							if (takeOne) {
-								drag.splitOne = true;
-								drag.stack = {s.id, 1};
-								s.cnt -= 1;
-								setHotbarStack(hit.idx, s);
-							} else {
-								drag.stack = s;
-								setHotbarStack(hit.idx, {0, 0});
-							}
+			if (x.is_down() && !drag.active) {
+				bool takeOne = x.is_doubleclick();
+				UISlotRef hit = hitTestCraftingUI(x.x, x.y, layout);
+				if (hit.kind == UISlotKind::Hotbar) {
+					ItemStack s = getHotbarStack(hit.idx);
+					if (s.id != 0 && s.cnt > 0) {
+						drag.active = true;
+						drag.src = DragSrc::Hotbar;
+						drag.hotbarIdx = hit.idx;
+						if (takeOne) {
+							drag.splitOne = true;
+							drag.stack = {s.id, 1};
+							s.cnt -= 1;
+							setHotbarStack(hit.idx, s);
+						} else {
+							drag.stack = s;
+							setHotbarStack(hit.idx, {0, 0});
 						}
-					} else if (hit.kind == UISlotKind::Craft) {
-						ItemStack s = getCraftStack(hit.r, hit.c);
-						if (s.id != 0 && s.cnt > 0) {
-							drag.active = true;
-							drag.src = DragSrc::Craft;
-							drag.craftR = hit.r;
-							drag.craftC = hit.c;
-							if (takeOne) {
-								drag.splitOne = true;
-								drag.stack = {s.id, 1};
-								s.cnt -= 1;
-								setCraftStack(hit.r, hit.c, s);
-							} else {
-								drag.stack = s;
-								setCraftStack(hit.r, hit.c, {0, 0});
-							}
+					}
+				} else if (hit.kind == UISlotKind::Craft) {
+					ItemStack s = getCraftStack(hit.r, hit.c);
+					if (s.id != 0 && s.cnt > 0) {
+						drag.active = true;
+						drag.src = DragSrc::Craft;
+						drag.craftR = hit.r;
+						drag.craftC = hit.c;
+						if (takeOne) {
+							drag.splitOne = true;
+							drag.stack = {s.id, 1};
+							s.cnt -= 1;
+							setCraftStack(hit.r, hit.c, s);
+						} else {
+							drag.stack = s;
+							setCraftStack(hit.r, hit.c, {0, 0});
 						}
-					} else if (hit.kind == UISlotKind::Output) {
-						if (craftPreviewRecipe && craftPreviewOutId != 0 && craftPreviewOutCnt > 0) {
-							drag.active = true;
-							drag.src = DragSrc::Output;
+					}
+				} else if (hit.kind == UISlotKind::Output) {
+					if (craftPreviewRecipe && craftPreviewOutId != 0 && craftPreviewOutCnt > 0) {
+						drag.active = true;
+						drag.src = DragSrc::Output;
 						drag.stack = {craftPreviewOutId, craftPreviewOutCnt};
 						drag.outRecipe = craftPreviewRecipe;
 						drag.outOffsetR = craftPreviewOffsetR;
@@ -1360,30 +1395,30 @@ void do_game() {
 				}
 			}
 
-				if (x.is_up() && drag.active) {
-					UISlotRef target = hitTestCraftingUI(x.x, x.y, layout);
-					if (target.kind == UISlotKind::Output) target.kind = UISlotKind::None;
+			if (x.is_up() && drag.active) {
+				UISlotRef target = hitTestCraftingUI(x.x, x.y, layout);
+				if (target.kind == UISlotKind::Output) target.kind = UISlotKind::None;
 
-					auto restoreToSource = [&]() {
-						if (drag.src == DragSrc::Hotbar) setHotbarStack(drag.hotbarIdx, drag.stack);
-						else if (drag.src == DragSrc::Craft) setCraftStack(drag.craftR, drag.craftC, drag.stack);
-					};
-					auto restoreSplitToSource = [&]() {
-						if (drag.src == DragSrc::Hotbar && drag.hotbarIdx >= 0 && drag.hotbarIdx < 10) {
-							ItemStack cur = getHotbarStack(drag.hotbarIdx);
-							if (cur.id == 0) setHotbarStack(drag.hotbarIdx, drag.stack);
-							else setHotbarStack(drag.hotbarIdx, {cur.id, cur.cnt + drag.stack.cnt});
-						} else if (drag.src == DragSrc::Craft && drag.craftR >= 0 && drag.craftR < 3 && drag.craftC >= 0 && drag.craftC < 3) {
-							ItemStack cur = getCraftStack(drag.craftR, drag.craftC);
-							if (cur.id == 0) setCraftStack(drag.craftR, drag.craftC, drag.stack);
-							else setCraftStack(drag.craftR, drag.craftC, {cur.id, cur.cnt + drag.stack.cnt});
-						}
-					};
+				auto restoreToSource = [&]() {
+					if (drag.src == DragSrc::Hotbar) setHotbarStack(drag.hotbarIdx, drag.stack);
+					else if (drag.src == DragSrc::Craft) setCraftStack(drag.craftR, drag.craftC, drag.stack);
+				};
+				auto restoreSplitToSource = [&]() {
+					if (drag.src == DragSrc::Hotbar && drag.hotbarIdx >= 0 && drag.hotbarIdx < 10) {
+						ItemStack cur = getHotbarStack(drag.hotbarIdx);
+						if (cur.id == 0) setHotbarStack(drag.hotbarIdx, drag.stack);
+						else setHotbarStack(drag.hotbarIdx, {cur.id, cur.cnt + drag.stack.cnt});
+					} else if (drag.src == DragSrc::Craft && drag.craftR >= 0 && drag.craftR < 3 && drag.craftC >= 0 && drag.craftC < 3) {
+						ItemStack cur = getCraftStack(drag.craftR, drag.craftC);
+						if (cur.id == 0) setCraftStack(drag.craftR, drag.craftC, drag.stack);
+						else setCraftStack(drag.craftR, drag.craftC, {cur.id, cur.cnt + drag.stack.cnt});
+					}
+				};
 
-					if (drag.src == DragSrc::Output) {
-						bool crafted = false;
-						if (target.kind == UISlotKind::Hotbar) {
-							CraftMatch cur = matchCrafting();
+				if (drag.src == DragSrc::Output) {
+					bool crafted = false;
+					if (target.kind == UISlotKind::Hotbar) {
+						CraftMatch cur = matchCrafting();
 						bool recipeOk = cur.recipe && cur.recipe == drag.outRecipe &&
 						                cur.offsetR == drag.outOffsetR && cur.offsetC == drag.outOffsetC;
 						if (recipeOk) {
@@ -1395,40 +1430,40 @@ void do_game() {
 								crafted = true;
 							}
 						}
-						}
-						drag = DragState();
-						if (crafted) {
-							refreshCraftPreview();
-							craftDirty = false;
-						}
-						continue;
 					}
-					if (drag.splitOne) {
-						bool placed = false;
-						if (target.kind == UISlotKind::Hotbar) {
-							ItemStack dst = getHotbarStack(target.idx);
-							if (canFitInStack(dst.id, dst.cnt, drag.stack.id, drag.stack.cnt)) {
-								if (dst.id == 0) setHotbarStack(target.idx, drag.stack);
-								else setHotbarStack(target.idx, {dst.id, dst.cnt + drag.stack.cnt});
-								placed = true;
-							}
-						} else if (target.kind == UISlotKind::Craft) {
-							ItemStack dst = getCraftStack(target.r, target.c);
-							if (canFitInStack(dst.id, dst.cnt, drag.stack.id, drag.stack.cnt)) {
-								if (dst.id == 0) setCraftStack(target.r, target.c, drag.stack);
-								else setCraftStack(target.r, target.c, {dst.id, dst.cnt + drag.stack.cnt});
-								placed = true;
-							}
-						}
-						if (!placed) restoreSplitToSource();
-						drag = DragState();
-						continue;
+					drag = DragState();
+					if (crafted) {
+						refreshCraftPreview();
+						craftDirty = false;
 					}
+					continue;
+				}
+				if (drag.splitOne) {
+					bool placed = false;
+					if (target.kind == UISlotKind::Hotbar) {
+						ItemStack dst = getHotbarStack(target.idx);
+						if (canFitInStack(dst.id, dst.cnt, drag.stack.id, drag.stack.cnt)) {
+							if (dst.id == 0) setHotbarStack(target.idx, drag.stack);
+							else setHotbarStack(target.idx, {dst.id, dst.cnt + drag.stack.cnt});
+							placed = true;
+						}
+					} else if (target.kind == UISlotKind::Craft) {
+						ItemStack dst = getCraftStack(target.r, target.c);
+						if (canFitInStack(dst.id, dst.cnt, drag.stack.id, drag.stack.cnt)) {
+							if (dst.id == 0) setCraftStack(target.r, target.c, drag.stack);
+							else setCraftStack(target.r, target.c, {dst.id, dst.cnt + drag.stack.cnt});
+							placed = true;
+						}
+					}
+					if (!placed) restoreSplitToSource();
+					drag = DragState();
+					continue;
+				}
 
-					bool dropped = false;
-					if (target.kind == UISlotKind::None) {
-						restoreToSource();
-						dropped = true;
+				bool dropped = false;
+				if (target.kind == UISlotKind::None) {
+					restoreToSource();
+					dropped = true;
 				} else if (drag.src == DragSrc::Hotbar && target.kind == UISlotKind::Hotbar && target.idx == drag.hotbarIdx) {
 					restoreToSource();
 					dropped = true;
@@ -1595,24 +1630,24 @@ void do_game() {
 				int cur = navDist[mx][my];
 				if (cur == 0) {
 					// already on player
-					} else if (cur == INF) {
-						randomWalk(*mons[i]);
-					} else {
-						pair<int, int> moves[4];
-						int movesCnt = 0;
-						for (int d = 0; d < 4; d++) {
-							int nx = mx + D[d][0], ny = my + D[d][1];
-							if (nx < 0 || ny < 0 || nx > mapX + 1 || ny > mapY + 1) continue;
-							if (!ok(Map[nx][ny])) continue;
-							if (navDist[nx][ny] == cur - 1) moves[movesCnt++] = {D[d][0], D[d][1]};
-						}
-						if (movesCnt > 0) {
-							auto mv = moves[rand() % movesCnt];
-							goit(mv.first, mv.second, *mons[i]);
-						} else {
-							randomWalk(*mons[i]);
-						}
+				} else if (cur == INF) {
+					randomWalk(*mons[i]);
+				} else {
+					pair<int, int> moves[4];
+					int movesCnt = 0;
+					for (int d = 0; d < 4; d++) {
+						int nx = mx + D[d][0], ny = my + D[d][1];
+						if (nx < 0 || ny < 0 || nx > mapX + 1 || ny > mapY + 1) continue;
+						if (!ok(Map[nx][ny])) continue;
+						if (navDist[nx][ny] == cur - 1) moves[movesCnt++] = {D[d][0], D[d][1]};
 					}
+					if (movesCnt > 0) {
+						auto mv = moves[rand() % movesCnt];
+						goit(mv.first, mv.second, *mons[i]);
+					} else {
+						randomWalk(*mons[i]);
+					}
+				}
 			}
 			auto Elapsed = chrono::duration_cast<chrono::milliseconds>(now - lasthurt[i]);
 			if (Elapsed.count() >= mons[i]->q && getDistSq(player.x, player.y, mons[i]->x, mons[i]->y) <= mons[i]->k * mons[i]->k) {
