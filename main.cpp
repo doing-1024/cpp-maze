@@ -31,13 +31,25 @@ bool game_, MAP[110][110];
 PIMAGE img[50];
 bool imgHasAlpha[50] = {false};
 int guaiShu;
-pair<int, int> Map2[110][110], Not2[30] = {{3, 0}, {3, 0}, {4, 0}, {5, 1}, {10, 3}, {5, 2}};
+pair<int, int> Map2[110][110], Not2[30] = {{1, 0}, {1, 0}, {2, 0}, {2, 1}, {3, 3}, {3, 2}};
 int tileW, tileH;
 
 int wupinlan[10], wupinlanCnt[10], At;
 const int MAX_STACK = 99;
 const int ITEM_MUBAN = 131;
 const int ITEM_MUGUN = 132;
+const int ITEM_TIEDING = 133;
+const int ITEM_ZUANSHI = 134;
+const int ITEM_MUTOU = 200 + obc::yuanmu;
+const int ITEM_SHITOU = 200 + obc::stone;
+const int ITEM_MUJIAN = 111;
+const int ITEM_SHIJIAN = 112;
+const int ITEM_TIEJIAN = 113;
+const int ITEM_ZUANSHIJIAN = 114;
+const int ITEM_MUGAO = 121;
+const int ITEM_SHIGAO = 122;
+const int ITEM_TIEGAO = 123;
+const int ITEM_ZUANSHIGAO = 124;
 
 struct ItemStack {
 	int id = 0;
@@ -191,10 +203,12 @@ DragState drag;
 
 void initCraftingRecipes() {
 	craftRecipes.clear();
-	int logItem = 200 + obc::yuanmu;
-	int stoneItem = 200 + obc::stone;
+	int logItem = ITEM_MUTOU;
+	int stoneItem = ITEM_SHITOU;
 	int plankItem = ITEM_MUBAN;
 	int stickItem = ITEM_MUGUN;
+	int ironItem = ITEM_TIEDING;
+	int diamondItem = ITEM_ZUANSHI;
 
 	// 原木 -> 4木板
 	{
@@ -221,7 +235,7 @@ void initCraftingRecipes() {
 		r.inId[0][0] = plankItem; r.inId[0][1] = plankItem; r.inId[0][2] = plankItem;
 		r.inId[1][1] = stickItem;
 		r.inId[2][1] = stickItem;
-		r.outId = 121;
+		r.outId = ITEM_MUGAO;
 		r.outCnt = 1;
 		craftRecipes.push_back(r);
 	}
@@ -231,7 +245,7 @@ void initCraftingRecipes() {
 		r.inId[0][0] = plankItem;
 		r.inId[1][0] = plankItem;
 		r.inId[2][0] = stickItem;
-		r.outId = 111;
+		r.outId = ITEM_MUJIAN;
 		r.outCnt = 1;
 		craftRecipes.push_back(r);
 	}
@@ -241,7 +255,57 @@ void initCraftingRecipes() {
 		r.inId[0][0] = stoneItem;
 		r.inId[1][0] = stoneItem;
 		r.inId[2][0] = stickItem;
-		r.outId = 112;
+		r.outId = ITEM_SHIJIAN;
+		r.outCnt = 1;
+		craftRecipes.push_back(r);
+	}
+	// 石镐：上排3石头，中间竖2木棍
+	{
+		CraftRecipe r;
+		r.inId[0][0] = stoneItem; r.inId[0][1] = stoneItem; r.inId[0][2] = stoneItem;
+		r.inId[1][1] = stickItem;
+		r.inId[2][1] = stickItem;
+		r.outId = ITEM_SHIGAO;
+		r.outCnt = 1;
+		craftRecipes.push_back(r);
+	}
+	// 铁剑：2铁锭 + 1木棍
+	{
+		CraftRecipe r;
+		r.inId[0][0] = ironItem;
+		r.inId[1][0] = ironItem;
+		r.inId[2][0] = stickItem;
+		r.outId = ITEM_TIEJIAN;
+		r.outCnt = 1;
+		craftRecipes.push_back(r);
+	}
+	// 铁镐：上排3铁锭，中间竖2木棍
+	{
+		CraftRecipe r;
+		r.inId[0][0] = ironItem; r.inId[0][1] = ironItem; r.inId[0][2] = ironItem;
+		r.inId[1][1] = stickItem;
+		r.inId[2][1] = stickItem;
+		r.outId = ITEM_TIEGAO;
+		r.outCnt = 1;
+		craftRecipes.push_back(r);
+	}
+	// 钻石剑：2钻石 + 1木棍
+	{
+		CraftRecipe r;
+		r.inId[0][0] = diamondItem;
+		r.inId[1][0] = diamondItem;
+		r.inId[2][0] = stickItem;
+		r.outId = ITEM_ZUANSHIJIAN;
+		r.outCnt = 1;
+		craftRecipes.push_back(r);
+	}
+	// 钻石镐：上排3钻石，中间竖2木棍
+	{
+		CraftRecipe r;
+		r.inId[0][0] = diamondItem; r.inId[0][1] = diamondItem; r.inId[0][2] = diamondItem;
+		r.inId[1][1] = stickItem;
+		r.inId[2][1] = stickItem;
+		r.outId = ITEM_ZUANSHIGAO;
 		r.outCnt = 1;
 		craftRecipes.push_back(r);
 	}
@@ -1272,7 +1336,7 @@ void do_menu() {
 				STATE = 0;
 				ofstream Cout("C:\\cundang\\1.txt");
 				Cout << 6 << endl;
-				Cout << 111 << ' ' << 112 << ' ' << 121 << ' ' << 200 + obc::dia << ' ';
+				Cout << ITEM_MUJIAN << ' ' << ITEM_SHIJIAN << ' ' << ITEM_MUGAO << ' ' << ITEM_ZUANSHI << ' ';
 				for (int i = 1; i <= 6; i++) Cout << 0 << ' ';
 				Cout << endl;
 				Cout << 1 << ' ' << 1 << ' ' << 1 << ' ' << 1 << ' ';
@@ -1344,6 +1408,12 @@ void do_game() {
 			lastMouseX = x.x;
 			lastMouseY = x.y;
 			if (pointInMiniMap(x.x, x.y)) continue;
+			if (x.is_wheel()) {
+				if (x.wheel > 0) At = (At + 9) % 10;
+				else if (x.wheel < 0) At = (At + 1) % 10;
+				watime = chrono::system_clock::now();
+				continue;
+			}
 			if (!x.is_left()) continue;
 
 			if (x.is_down() && !drag.active) {
@@ -1553,10 +1623,16 @@ void do_game() {
 		while (mousemsg()) {
 			x = getmouse();
 			if (pointInMiniMap(x.x, x.y)) continue;
+			if (x.is_wheel()) {
+				if (x.wheel > 0) At = (At + 9) % 10;
+				else if (x.wheel < 0) At = (At + 1) % 10;
+				watime = chrono::system_clock::now();
+				continue;
+			}
 			if (x.is_left()) {
 				gridY = x.x / tileW + camY;
 				gridX = x.y / tileH + camX;
-				if (x.is_down()) {
+				if (x.is_down() && !downok) {
 					downok = 1;
 					leftok = 0;
 					wax = gridX, way = gridY;
@@ -1606,8 +1682,20 @@ void do_game() {
 				watime = chrono::system_clock::now();
 				if (Map[wax][way] > 1 && player.wa + wupin[wupinlan[At]].wa >= Map2[wax][way].second
 				    && getDistSq(wax, way, player.x, player.y) <= player.k * player.k) {
-					diaoluo[wax][way].push(200 + Map[wax][way]);
-					Map[wax][way] = 1;
+					int block = Map[wax][way];
+					int dropId = 0;
+					int newBlock = 1;
+					if (block == obc::grass) {
+						dropId = 200 + obc::soil;
+					} else if (block == obc::dia) {
+						dropId = ITEM_ZUANSHI;
+					} else if (block == obc::iron) {
+						dropId = ITEM_TIEDING;
+					} else {
+						dropId = 200 + block;
+					}
+					if (dropId != 0) diaoluo[wax][way].push(dropId);
+					Map[wax][way] = newBlock;
 					navDirty = true;
 					minimapTerrainCacheDirty = true;
 					leftok = 1;
@@ -1709,7 +1797,7 @@ int main() {
 	if (CreateDirectory("C:\\cundang", NULL)) {
 		ofstream Cout("C:\\cundang\\1.txt");
 		Cout << 6 << endl;
-		Cout << 111 << ' ' << 112 << ' ' << 121 << ' ';
+		Cout << ITEM_MUJIAN << ' ' << ITEM_SHIJIAN << ' ' << ITEM_MUGAO << ' ';
 		for (int i = 1; i <= 8; i++) Cout << 0 << ' ';
 		Cout << endl;
 		Cout << 1 << ' ' << 1 << ' ' << 1 << ' ';
@@ -1724,23 +1812,45 @@ int main() {
 		if (!(Cin >> wupinlanCnt[i])) wupinlanCnt[i] = wupinlan[i] ? 1 : 0;
 	}
 	Cin.close();
+	for (int i = 0; i <= 9; i++) {
+		if (wupinlan[i] == 200 + obc::dia) wupinlan[i] = ITEM_ZUANSHI;
+	}
 	
 	tileW = realW / (viewW + 4);
 	tileH = realH / (viewH + 7);
 
-	wupin[111] = nodeWP(obc::mjb, 10, 1, 0);
-	wupindiaoluo[111] = nodeWP(obc::mj, 10, 1, 0);
+	wupin[ITEM_MUJIAN] = nodeWP(obc::mj, 59, 3, 0);
+	wupindiaoluo[ITEM_MUJIAN] = nodeWP(obc::mj, 59, 3, 0);
 	
-	wupin[112] = nodeWP(obc::sjb, 20, 2, 0);
-	wupindiaoluo[112] = nodeWP(obc::sj, 20, 2, 0);
+	wupin[ITEM_SHIJIAN] = nodeWP(obc::sj, 131, 4, 0);
+	wupindiaoluo[ITEM_SHIJIAN] = nodeWP(obc::sj, 131, 4, 0);
 	
-	wupin[121] = nodeWP(obc::mgb, 10, 0, 1);
-	wupindiaoluo[121] = nodeWP(obc::mg, 10, 0, 1);	
+	wupin[ITEM_TIEJIAN] = nodeWP(obc::tiejian, 250, 5, 0);
+	wupindiaoluo[ITEM_TIEJIAN] = nodeWP(obc::tiejian, 250, 5, 0);
+	
+	wupin[ITEM_ZUANSHIJIAN] = nodeWP(obc::zuanshijian, 1561, 6, 0);
+	wupindiaoluo[ITEM_ZUANSHIJIAN] = nodeWP(obc::zuanshijian, 1561, 6, 0);
+	
+	wupin[ITEM_MUGAO] = nodeWP(obc::mg, 59, 0, 1);
+	wupindiaoluo[ITEM_MUGAO] = nodeWP(obc::mg, 59, 0, 1);
+	
+	wupin[ITEM_SHIGAO] = nodeWP(obc::shigao, 131, 0, 2);
+	wupindiaoluo[ITEM_SHIGAO] = nodeWP(obc::shigao, 131, 0, 2);
+	
+	wupin[ITEM_TIEGAO] = nodeWP(obc::tiegao, 250, 0, 3);
+	wupindiaoluo[ITEM_TIEGAO] = nodeWP(obc::tiegao, 250, 0, 3);
+	
+	wupin[ITEM_ZUANSHIGAO] = nodeWP(obc::zuanshigao, 1561, 0, 4);
+	wupindiaoluo[ITEM_ZUANSHIGAO] = nodeWP(obc::zuanshigao, 1561, 0, 4);
 
 	wupin[ITEM_MUBAN] = nodeWP(obc::muban, 0, 0, 0);
 	wupindiaoluo[ITEM_MUBAN] = nodeWP(obc::muban, 0, 0, 0);
 	wupin[ITEM_MUGUN] = nodeWP(obc::mugun, 0, 0, 0);
 	wupindiaoluo[ITEM_MUGUN] = nodeWP(obc::mugun, 0, 0, 0);
+	wupin[ITEM_TIEDING] = nodeWP(obc::tieding, 0, 0, 0);
+	wupindiaoluo[ITEM_TIEDING] = nodeWP(obc::tieding, 0, 0, 0);
+	wupin[ITEM_ZUANSHI] = nodeWP(obc::zuanshiwupin, 0, 0, 0);
+	wupindiaoluo[ITEM_ZUANSHI] = nodeWP(obc::zuanshiwupin, 0, 0, 0);
 	
 	for (int idx = 0; idx < NOT_COUNT; idx++) {
 		int i = Not[idx];
@@ -1752,19 +1862,23 @@ int main() {
 
 	initCraftingRecipes();
 	
-	string lujing[100] {
+	vector<string> lujing {
 		"beijing.jpg", "caofangkuai.jpg",  "nitu.jpg", "chuansongmenfangkuai.jpg",
 		"wanjia.jpg", "shenglitupian.jpg", "yuanshi.jpg", "zuanshikuang.jpg",
 		"tiekuang.jpg", "jiangshi.jpg",    "jiyan.jpg", "kongbai.jpg",
 		"shibai.jpg", "xin.jpg", "kongxin.jpg", "gong.jpg", "jian.jpg",
 		"jiqishi.jpg", "nishi.jpg", "zhudating.jpg", "maoxianmoshi.jpg",
-		"wupinlan.jpg", "mujian.jpg", "mujianblack.jpg", "wupinlanat.jpg",
-		"shijian.jpg", "shijianblack.jpg", "zhizhu.jpg", "chongzhi.jpg","mugao.jpg",
-		"mugaob.jpg","zuanshib.jpg","zuanshi.jpg",
-		"yuanmu.jpg", "muban.jpg", "mugun.png"
+		"wupinlan.jpg", "mujian.png", "mujian.png", "wupinlanat.jpg",
+		"shijian.png", "shijian.png", "zhizhu.jpg", "chongzhi.jpg", "mugao.png",
+		"mugao.png", "zuanshi.png", "zuanshi.png",
+		"yuanmu.jpg", "muban.jpg", "mugun.png",
+		"shigao.png", "shigao.png", "tiegao.png", "tiegao.png",
+		"zuanshigao.png", "zuanshigao.png", "tiejian.png", "tiejian.png",
+		"zuanshijian.png", "zuanshijian.png", "tieding.png", "zuanshi.png"
 	};
 
-	for (int i = 0; i < 36; i++) {
+	int lujingCount = (int)lujing.size();
+	for (int i = 0; i < lujingCount; i++) {
 		img[i + 1] = newimage();
 		string _ = "./caizhibao/" + lujing[i];
 		if (_.size() >= 4 && _.substr(_.size() - 4) == ".png") {
@@ -1791,7 +1905,7 @@ int main() {
 	for (int i = 0; i < 10; i++)
 		Cout << wupinlanCnt[i] << ' ';
 	Cout.close();
-	for (int i = 1; i <= 36; i++) delimage(img[i]);
+	for (int i = 1; i <= lujingCount; i++) delimage(img[i]);
 	if (minimapTerrainCache) delimage(minimapTerrainCache);
 	closegraph();
 	cout << "资源释放完毕";

@@ -44,23 +44,25 @@ namespace obc{//object encode list ¶ÔÏó±àÂëÁÐ±í
 		wupinlan = 22,	 // ÎïÆ·À¸
 		mujian = 23,	 // Ä¾½£ 
 		mj = 23,	     // Ä¾½£
-		mujianblack = 24,// Ä¾½£»ÒÉ«±³¾°
-		mjb = 24,		 // Ä¾½£»ÒÉ«±³¾°
 		wupinlanw = 25,  // °×¿òÎïÆ·À¸
 		wplat = 25,      // °×¿òÎïÆ·À¸
 		shijian = 26,    // Ê¯½£
 		sj = 26,         // Ê¯½£ 
-		shijianblack = 27,// Ê¯½£»ÒÉ«±³¾° 
-		sjb = 27,         // Ê¯½£»ÒÉ«±³¾° 
 		zhizhu = 28,     // Ö©Öë
 		cz = 29,         // ÖØÖÃ 
 		mg = 30,         // Ä¾¸å
-		mgb = 31,		  // Ä¾¸å»ÒÉ«
 		dia2 = 32,       // ×êÊ¯µÄµÚ¶þÖÖÐÎÌ¬
 		dia3 = 33,       // ×êÊ¯µôÂäÎïÐÎÌ¬ 
 		yuanmu = 34,     // Ô­Ä¾
 		muban = 35,      // Ä¾°å
-		mugun = 36       // Ä¾¹÷
+		mugun = 36,      // Ä¾¹÷
+		shigao = 37,     // Ê¯¸å
+		tiegao = 39,     // Ìú¸å
+		zuanshigao = 41, // ×êÊ¯¸å
+		tiejian = 43,    // Ìú½£
+		zuanshijian = 45,// ×êÊ¯½£
+		tieding = 47,    // Ìú¶¢
+		zuanshiwupin = 48 // ×êÊ¯
 	};
 }
 /*
